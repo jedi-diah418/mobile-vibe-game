@@ -231,6 +231,14 @@ class VibeMatcherGame {
     async swapPieces(row1, col1, row2, col2) {
         this.isProcessing = true;
 
+        // Add swapping animation
+        const piece1 = document.querySelector(`[data-row="${row1}"][data-col="${col1}"]`);
+        const piece2 = document.querySelector(`[data-row="${row2}"][data-col="${col2}"]`);
+        if (piece1) piece1.classList.add('swapping');
+        if (piece2) piece2.classList.add('swapping');
+
+        await this.sleep(150);
+
         // Swap in board array - always allow the swap
         [this.board[row1][col1], this.board[row2][col2]] =
         [this.board[row2][col2], this.board[row1][col1]];
@@ -243,7 +251,7 @@ class VibeMatcherGame {
         this.deselectPiece();
         this.updateUI();
 
-        await this.sleep(300);
+        await this.sleep(200);
 
         // Check for matches and process them
         await this.processMatches();
@@ -311,13 +319,22 @@ class VibeMatcherGame {
         let matches = this.findMatches();
 
         while (matches.length > 0) {
-            // Highlight matched pieces
+            // SCREEN SHAKE for big matches
+            if (matches.length >= 4) {
+                this.screenShake();
+            }
+
+            // Highlight matched pieces and create particles
             matches.forEach(([row, col]) => {
                 const piece = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-                if (piece) piece.classList.add('matched');
+                if (piece) {
+                    piece.classList.add('matched');
+                    // Create particle burst at piece location
+                    this.createParticleBurst(piece, matches.length);
+                }
             });
 
-            await this.sleep(300);
+            await this.sleep(400);
 
             // Calculate score
             const matchScore = matches.length * 10 * this.level;
@@ -338,10 +355,50 @@ class VibeMatcherGame {
             // Render with animation
             this.render();
 
-            await this.sleep(300);
+            await this.sleep(350);
 
             // Check for new matches (cascading)
             matches = this.findMatches();
+        }
+    }
+
+    screenShake() {
+        const container = document.querySelector('.game-container');
+        container.classList.add('shake');
+        setTimeout(() => {
+            container.classList.remove('shake');
+        }, 500);
+    }
+
+    createParticleBurst(pieceElement, matchCount) {
+        const rect = pieceElement.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+
+        // More particles for bigger matches
+        const particleCount = Math.min(matchCount * 3, 20);
+
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+
+            // Random direction
+            const angle = (Math.PI * 2 * i) / particleCount;
+            const velocity = 40 + Math.random() * 60;
+            const tx = Math.cos(angle) * velocity;
+            const ty = Math.sin(angle) * velocity;
+
+            particle.style.left = `${centerX}px`;
+            particle.style.top = `${centerY}px`;
+            particle.style.setProperty('--tx', `${tx}px`);
+            particle.style.setProperty('--ty', `${ty}px`);
+
+            document.body.appendChild(particle);
+
+            // Remove particle after animation
+            setTimeout(() => {
+                particle.remove();
+            }, 800);
         }
     }
 
