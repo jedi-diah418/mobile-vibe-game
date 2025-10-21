@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Vibe Matcher - Match the Vibes!</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="game-container">
+        <header class="game-header">
+            <div class="header-content">
+                <h1 class="game-title">✨ Vibe Matcher ✨</h1>
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Score</span>
+                        <span class="stat-value" id="score">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Level</span>
+                        <span class="stat-value" id="level">1</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Moves</span>
+                        <span class="stat-value" id="moves">30</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="game-main">
+            <div class="level-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div class="progress-text">
+                    <span id="current-score">0</span> / <span id="target-score">1000</span>
+                </div>
+            </div>
+
+            <div id="game-board" class="game-board"></div>
+
+            <div class="message-overlay" id="message-overlay">
+                <div class="message-content">
+                    <h2 id="message-title">Level Complete!</h2>
+                    <p id="message-text">You matched the vibes!</p>
+                    <button class="btn-primary" id="message-button">Next Level</button>
+                </div>
+            </div>
+        </main>
+
+        <footer class="game-footer">
+            <button class="btn-secondary" id="reset-button">🔄 Reset</button>
+            <button class="btn-secondary" id="hint-button">💡 Hint</button>
+            <div class="high-score">Best: <span id="high-score">0</span></div>
+        </footer>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
