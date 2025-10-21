@@ -70,10 +70,12 @@ class VibeMatcherGame {
 
         boardElement.addEventListener('touchstart', (e) => {
             if (this.isProcessing || this.moves <= 0) return;
+
             const touch = e.touches[0];
             const piece = e.target.closest('.vibe-piece');
 
             if (piece) {
+                e.preventDefault(); // Prevent Safari from scrolling
                 touchStartX = touch.clientX;
                 touchStartY = touch.clientY;
                 touchStartPiece = piece;
@@ -83,15 +85,17 @@ class VibeMatcherGame {
                 const col = parseInt(piece.dataset.col);
                 this.selectPiece(row, col);
             }
-        }, { passive: true });
+        }, { passive: false });
 
         boardElement.addEventListener('touchmove', (e) => {
             if (!touchStartPiece || this.isProcessing || this.moves <= 0) return;
 
+            e.preventDefault(); // Prevent Safari from scrolling during swipe
+
             const touch = e.touches[0];
             const deltaX = touch.clientX - touchStartX;
             const deltaY = touch.clientY - touchStartY;
-            const minSwipeDistance = 20; // Minimum pixels to detect swipe
+            const minSwipeDistance = 30; // Minimum pixels to detect swipe
 
             if (Math.abs(deltaX) > minSwipeDistance || Math.abs(deltaY) > minSwipeDistance) {
                 if (!swipeDetected) {
@@ -125,7 +129,7 @@ class VibeMatcherGame {
                     }
                 }
             }
-        }, { passive: true });
+        }, { passive: false });
 
         boardElement.addEventListener('touchend', (e) => {
             if (!swipeDetected && touchStartPiece && this.selectedPiece) {
