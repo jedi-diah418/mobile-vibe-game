@@ -145,9 +145,29 @@ class VibeMatcherGame {
         });
 
         boardElement.addEventListener('touchend', (e) => {
-            // Clean up selection if no swipe occurred
-            if (!isDragging && this.selectedPiece) {
-                this.deselectPiece();
+            // If no swipe occurred, treat it as a tap
+            if (!isDragging && touchStartRow !== -1) {
+                // Check if we already have a selected piece
+                if (this.selectedPiece &&
+                    (this.selectedPiece[0] !== touchStartRow || this.selectedPiece[1] !== touchStartCol)) {
+                    // We have a different piece selected - try to swap
+                    const [selectedRow, selectedCol] = this.selectedPiece;
+
+                    if (this.areAdjacent(selectedRow, selectedCol, touchStartRow, touchStartCol)) {
+                        // Adjacent pieces - swap them
+                        this.swapPieces(selectedRow, selectedCol, touchStartRow, touchStartCol);
+                    } else {
+                        // Not adjacent - deselect old, select new
+                        this.deselectPiece();
+                        this.selectPiece(touchStartRow, touchStartCol);
+                    }
+                } else if (!this.selectedPiece) {
+                    // Nothing selected yet - select this piece
+                    this.selectPiece(touchStartRow, touchStartCol);
+                } else {
+                    // Tapped the same piece - deselect it
+                    this.deselectPiece();
+                }
             }
 
             touchStartRow = -1;
