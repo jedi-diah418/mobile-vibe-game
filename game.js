@@ -62,90 +62,100 @@ class VibeMatcherGame {
             }
         });
 
-        // Touch/swipe events for mobile
+        // Unified touch/swipe system for mobile
         let touchStartX = 0;
         let touchStartY = 0;
-        let touchStartPiece = null;
-        let swipeDetected = false;
+        let touchStartRow = -1;
+        let touchStartCol = -1;
+        let isDragging = false;
 
+        // Prevent all default touch behavior on the board
+        boardElement.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, { passive: false });
+
+        boardElement.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, { passive: false });
+
+        boardElement.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, { passive: false });
+
+        // Handle touch interactions
         boardElement.addEventListener('touchstart', (e) => {
             if (this.isProcessing || this.moves <= 0) return;
 
             const touch = e.touches[0];
-            const piece = e.target.closest('.vibe-piece');
+            const piece = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.vibe-piece');
 
             if (piece) {
-                e.preventDefault(); // Prevent Safari from scrolling
                 touchStartX = touch.clientX;
                 touchStartY = touch.clientY;
-                touchStartPiece = piece;
-                swipeDetected = false;
+                touchStartRow = parseInt(piece.dataset.row);
+                touchStartCol = parseInt(piece.dataset.col);
+                isDragging = false;
 
-                const row = parseInt(piece.dataset.row);
-                const col = parseInt(piece.dataset.col);
-                this.selectPiece(row, col);
+                this.selectPiece(touchStartRow, touchStartCol);
             }
-        }, { passive: false });
+        });
 
         boardElement.addEventListener('touchmove', (e) => {
-            if (!touchStartPiece || this.isProcessing || this.moves <= 0) return;
-
-            e.preventDefault(); // Prevent Safari from scrolling during swipe
+            if (touchStartRow === -1 || this.isProcessing || this.moves <= 0) return;
 
             const touch = e.touches[0];
             const deltaX = touch.clientX - touchStartX;
             const deltaY = touch.clientY - touchStartY;
-            const minSwipeDistance = 30; // Minimum pixels to detect swipe
 
-            if (Math.abs(deltaX) > minSwipeDistance || Math.abs(deltaY) > minSwipeDistance) {
-                if (!swipeDetected) {
-                    swipeDetected = true;
-                    const startRow = parseInt(touchStartPiece.dataset.row);
-                    const startCol = parseInt(touchStartPiece.dataset.col);
+            // Lower threshold for faster response
+            if (!isDragging && (Math.abs(deltaX) > 15 || Math.abs(deltaY) > 15)) {
+                isDragging = true;
 
-                    let targetRow = startRow;
-                    let targetCol = startCol;
+                let targetRow = touchStartRow;
+                let targetCol = touchStartCol;
 
-                    // Determine swipe direction
-                    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                        // Horizontal swipe
-                        if (deltaX > 0 && startCol < this.boardSize - 1) {
-                            targetCol = startCol + 1; // Swipe right
-                        } else if (deltaX < 0 && startCol > 0) {
-                            targetCol = startCol - 1; // Swipe left
-                        }
-                    } else {
-                        // Vertical swipe
-                        if (deltaY > 0 && startRow < this.boardSize - 1) {
-                            targetRow = startRow + 1; // Swipe down
-                        } else if (deltaY < 0 && startRow > 0) {
-                            targetRow = startRow - 1; // Swipe up
-                        }
+                // Determine primary swipe direction
+                if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                    // Horizontal swipe
+                    if (deltaX > 0 && touchStartCol < this.boardSize - 1) {
+                        targetCol = touchStartCol + 1;
+                    } else if (deltaX < 0 && touchStartCol > 0) {
+                        targetCol = touchStartCol - 1;
                     }
-
-                    // Perform swap if valid
-                    if (targetRow !== startRow || targetCol !== startCol) {
-                        this.handlePieceClick(targetRow, targetCol);
+                } else {
+                    // Vertical swipe
+                    if (deltaY > 0 && touchStartRow < this.boardSize - 1) {
+                        targetRow = touchStartRow + 1;
+                    } else if (deltaY < 0 && touchStartRow > 0) {
+                        targetRow = touchStartRow - 1;
                     }
                 }
+
+                // Execute swap if we have a valid target
+                if (targetRow !== touchStartRow || targetCol !== touchStartCol) {
+                    this.swapPieces(touchStartRow, touchStartCol, targetRow, targetCol);
+                    // Reset to prevent multiple swaps
+                    touchStartRow = -1;
+                    touchStartCol = -1;
+                }
             }
-        }, { passive: false });
+        });
 
         boardElement.addEventListener('touchend', (e) => {
-            if (!swipeDetected && touchStartPiece && this.selectedPiece) {
-                // If no swipe was detected, just deselect after a brief moment
-                setTimeout(() => {
-                    if (this.selectedPiece) {
-                        this.deselectPiece();
-                    }
-                }, 100);
+            // Clean up selection if no swipe occurred
+            if (!isDragging && this.selectedPiece) {
+                this.deselectPiece();
             }
 
-            touchStartPiece = null;
+            touchStartRow = -1;
+            touchStartCol = -1;
             touchStartX = 0;
             touchStartY = 0;
-            swipeDetected = false;
-        }, { passive: true });
+            isDragging = false;
+        });
 
         // Button listeners
         document.getElementById('reset-button').addEventListener('click', () => {
