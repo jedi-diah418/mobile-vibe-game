@@ -62,35 +62,85 @@ class VibeMatcherGame {
             }
         });
 
-        // Touch events for mobile
+        // Touch/swipe events for mobile
+        let touchStartX = 0;
+        let touchStartY = 0;
         let touchStartPiece = null;
+        let swipeDetected = false;
+
         boardElement.addEventListener('touchstart', (e) => {
             if (this.isProcessing || this.moves <= 0) return;
+            const touch = e.touches[0];
             const piece = e.target.closest('.vibe-piece');
+
             if (piece) {
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
                 touchStartPiece = piece;
+                swipeDetected = false;
+
                 const row = parseInt(piece.dataset.row);
                 const col = parseInt(piece.dataset.col);
                 this.selectPiece(row, col);
             }
         }, { passive: true });
 
+        boardElement.addEventListener('touchmove', (e) => {
+            if (!touchStartPiece || this.isProcessing || this.moves <= 0) return;
+
+            const touch = e.touches[0];
+            const deltaX = touch.clientX - touchStartX;
+            const deltaY = touch.clientY - touchStartY;
+            const minSwipeDistance = 20; // Minimum pixels to detect swipe
+
+            if (Math.abs(deltaX) > minSwipeDistance || Math.abs(deltaY) > minSwipeDistance) {
+                if (!swipeDetected) {
+                    swipeDetected = true;
+                    const startRow = parseInt(touchStartPiece.dataset.row);
+                    const startCol = parseInt(touchStartPiece.dataset.col);
+
+                    let targetRow = startRow;
+                    let targetCol = startCol;
+
+                    // Determine swipe direction
+                    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                        // Horizontal swipe
+                        if (deltaX > 0 && startCol < this.boardSize - 1) {
+                            targetCol = startCol + 1; // Swipe right
+                        } else if (deltaX < 0 && startCol > 0) {
+                            targetCol = startCol - 1; // Swipe left
+                        }
+                    } else {
+                        // Vertical swipe
+                        if (deltaY > 0 && startRow < this.boardSize - 1) {
+                            targetRow = startRow + 1; // Swipe down
+                        } else if (deltaY < 0 && startRow > 0) {
+                            targetRow = startRow - 1; // Swipe up
+                        }
+                    }
+
+                    // Perform swap if valid
+                    if (targetRow !== startRow || targetCol !== startCol) {
+                        this.handlePieceClick(targetRow, targetCol);
+                    }
+                }
+            }
+        }, { passive: true });
+
         boardElement.addEventListener('touchend', (e) => {
-            if (this.isProcessing || this.moves <= 0 || !touchStartPiece) return;
-
-            const touch = e.changedTouches[0];
-            const endElement = document.elementFromPoint(touch.clientX, touch.clientY);
-            const endPiece = endElement?.closest('.vibe-piece');
-
-            if (endPiece && endPiece !== touchStartPiece) {
-                const row = parseInt(endPiece.dataset.row);
-                const col = parseInt(endPiece.dataset.col);
-                this.handlePieceClick(row, col);
-            } else if (this.selectedPiece) {
-                this.deselectPiece();
+            if (!swipeDetected && touchStartPiece && this.selectedPiece) {
+                // If no swipe was detected, just deselect after a brief moment
+                setTimeout(() => {
+                    if (this.selectedPiece) {
+                        this.deselectPiece();
+                    }
+                }, 100);
             }
 
             touchStartPiece = null;
+            touchStartX = 0;
+            touchStartY = 0;
+            swipeDetected = false;
         }, { passive: true });
 
         // Button listeners
