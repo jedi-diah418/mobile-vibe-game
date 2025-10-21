@@ -17,7 +17,7 @@ html {
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+    background: #000000;
     width: 100%;
     height: 100%;
     margin: 0;
@@ -32,14 +32,14 @@ body {
 }
 
 .game-container {
-    background: rgba(20, 30, 40, 0.95);
-    border-radius: 15px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-    border: 1px solid rgba(100, 255, 218, 0.2);
-    max-width: 500px;
-    width: calc(100% - 20px);
-    height: calc(100% - 20px);
-    margin: 10px;
+    background: rgba(10, 15, 20, 0.98);
+    border-radius: 12px;
+    box-shadow: 0 0 40px rgba(100, 255, 218, 0.2);
+    border: 2px solid rgba(100, 255, 218, 0.4);
+    max-width: 600px;
+    width: calc(100% - 10px);
+    height: calc(100% - 10px);
+    margin: 5px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -47,49 +47,49 @@ body {
 }
 
 .game-header {
-    background: linear-gradient(135deg, #1a3a52 0%, #0f2027 100%);
-    padding: 15px;
+    background: linear-gradient(135deg, #0a1a24 0%, #050e15 100%);
+    padding: 10px;
     color: #64ffda;
     text-align: center;
-    border-bottom: 2px solid rgba(100, 255, 218, 0.3);
+    border-bottom: 1px solid rgba(100, 255, 218, 0.3);
     flex-shrink: 0;
 }
 
 .game-title {
-    font-size: 24px;
-    margin-bottom: 10px;
+    font-size: 20px;
+    margin-bottom: 6px;
     text-shadow: 0 0 10px rgba(100, 255, 218, 0.5);
 }
 
 .stats {
     display: flex;
     justify-content: space-around;
-    gap: 10px;
+    gap: 6px;
 }
 
 .stat-item {
     display: flex;
     flex-direction: column;
-    background: rgba(100, 255, 218, 0.15);
-    padding: 8px 15px;
-    border-radius: 10px;
-    min-width: 80px;
+    background: rgba(100, 255, 218, 0.1);
+    padding: 4px 10px;
+    border-radius: 6px;
+    min-width: 65px;
     border: 1px solid rgba(100, 255, 218, 0.3);
 }
 
 .stat-label {
-    font-size: 12px;
-    opacity: 0.9;
+    font-size: 10px;
+    opacity: 0.8;
 }
 
 .stat-value {
-    font-size: 24px;
+    font-size: 18px;
     font-weight: bold;
-    margin-top: 2px;
+    margin-top: 1px;
 }
 
 .game-main {
-    padding: 10px;
+    padding: 8px;
     position: relative;
     flex: 1;
     overflow: hidden;
@@ -99,17 +99,17 @@ body {
 }
 
 .level-progress {
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     flex-shrink: 0;
 }
 
 .progress-bar {
     width: 100%;
-    height: 20px;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 10px;
+    height: 16px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
     overflow: hidden;
-    margin-bottom: 5px;
+    margin-bottom: 4px;
     border: 1px solid rgba(100, 255, 218, 0.2);
 }
 
@@ -123,7 +123,7 @@ body {
 
 .progress-text {
     text-align: center;
-    font-size: 14px;
+    font-size: 12px;
     color: #64ffda;
     font-weight: 600;
 }
@@ -131,9 +131,9 @@ body {
 .game-board {
     display: grid;
     grid-template-columns: repeat(8, 1fr);
-    gap: 3px;
-    background: rgba(0, 0, 0, 0.4);
-    padding: 6px;
+    gap: 4px;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 8px;
     border-radius: 12px;
     aspect-ratio: 1;
     width: 100%;
@@ -143,28 +143,28 @@ body {
     user-select: none;
     position: relative;
     overflow: visible;
-    border: 2px solid rgba(100, 255, 218, 0.2);
-    flex-shrink: 1;
+    border: 2px solid rgba(100, 255, 218, 0.3);
+    flex: 1;
     min-height: 0;
 }
 
 .vibe-piece {
     aspect-ratio: 1;
-    border-radius: 8px;
+    border-radius: 10px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 22px;
+    font-size: 28px;
     transition: transform 0.15s ease;
     user-select: none;
     -webkit-user-select: none;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.5);
     font-weight: bold;
     width: 100%;
     height: 100%;
-    color: rgba(255, 255, 255, 0.9);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
 }
 
 .vibe-piece:active {
@@ -270,15 +270,15 @@ body {
 }
 
 .game-footer {
-    padding: 12px;
-    background: rgba(15, 32, 39, 0.95);
-    border-top: 2px solid rgba(100, 255, 218, 0.3);
+    padding: 8px;
+    background: rgba(5, 14, 21, 0.95);
+    border-top: 1px solid rgba(100, 255, 218, 0.3);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex-shrink: 0;
-    min-height: 60px;
+    min-height: 48px;
 }
 
 .btn-primary, .btn-secondary {
@@ -364,58 +364,70 @@ body {
 /* Mobile viewport handling */
 @media (max-width: 480px) {
     .game-container {
-        border-radius: 8px;
-        width: calc(100% - 8px);
-        height: calc(100% - 8px);
-        margin: 4px;
+        border-radius: 6px;
+        width: calc(100% - 6px);
+        height: calc(100% - 6px);
+        margin: 3px;
     }
 
     .game-header {
-        padding: 8px;
-    }
-
-    .game-title {
-        font-size: 20px;
-        margin-bottom: 8px;
-    }
-
-    .stat-item {
-        padding: 5px 10px;
-        min-width: 65px;
-    }
-
-    .stat-value {
-        font-size: 18px;
-    }
-
-    .game-main {
         padding: 6px;
     }
 
-    .level-progress {
-        margin-bottom: 8px;
+    .game-title {
+        font-size: 16px;
+        margin-bottom: 4px;
     }
 
-    .game-board {
-        gap: 2px;
+    .stat-item {
+        padding: 3px 8px;
+        min-width: 55px;
+    }
+
+    .stat-label {
+        font-size: 9px;
+    }
+
+    .stat-value {
+        font-size: 14px;
+    }
+
+    .game-main {
         padding: 4px;
     }
 
+    .level-progress {
+        margin-bottom: 4px;
+    }
+
+    .progress-bar {
+        height: 12px;
+    }
+
+    .progress-text {
+        font-size: 10px;
+    }
+
+    .game-board {
+        gap: 3px;
+        padding: 6px;
+    }
+
     .vibe-piece {
-        font-size: 16px;
+        font-size: 20px;
     }
 
     .game-footer {
-        padding: 8px;
-        min-height: 50px;
+        padding: 6px;
+        min-height: 44px;
     }
 
     .btn-secondary {
-        padding: 6px 10px;
-        font-size: 12px;
+        padding: 5px 8px;
+        font-size: 11px;
     }
 
     .high-score {
-        font-size: 12px;
+        font-size: 11px;
     }
 }

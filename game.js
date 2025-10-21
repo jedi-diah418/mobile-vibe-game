@@ -231,37 +231,22 @@ class VibeMatcherGame {
     async swapPieces(row1, col1, row2, col2) {
         this.isProcessing = true;
 
-        // Swap in board array
+        // Swap in board array - always allow the swap
         [this.board[row1][col1], this.board[row2][col2]] =
         [this.board[row2][col2], this.board[row1][col1]];
+
+        // Deduct move immediately
+        this.moves--;
 
         // Render the swap
         this.render();
         this.deselectPiece();
+        this.updateUI();
 
-        await this.sleep(200);
+        await this.sleep(300);
 
-        // Check for matches
-        const matches = this.findMatches();
-
-        if (matches.length > 0) {
-            this.moves--;
-            this.updateUI();
-            await this.processMatches();
-        } else {
-            // Swap back if no match - show invalid feedback
-            const piece1 = document.querySelector(`[data-row="${row1}"][data-col="${col1}"]`);
-            const piece2 = document.querySelector(`[data-row="${row2}"][data-col="${col2}"]`);
-
-            if (piece1) piece1.classList.add('invalid');
-            if (piece2) piece2.classList.add('invalid');
-
-            await this.sleep(400);
-
-            [this.board[row1][col1], this.board[row2][col2]] =
-            [this.board[row2][col2], this.board[row1][col1]];
-            this.render();
-        }
+        // Check for matches and process them
+        await this.processMatches();
 
         // Check for game over or level complete
         if (this.moves <= 0) {
