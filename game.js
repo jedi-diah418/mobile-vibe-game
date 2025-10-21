@@ -249,7 +249,15 @@ class VibeMatcherGame {
             this.updateUI();
             await this.processMatches();
         } else {
-            // Swap back if no match
+            // Swap back if no match - show invalid feedback
+            const piece1 = document.querySelector(`[data-row="${row1}"][data-col="${col1}"]`);
+            const piece2 = document.querySelector(`[data-row="${row2}"][data-col="${col2}"]`);
+
+            if (piece1) piece1.classList.add('invalid');
+            if (piece2) piece2.classList.add('invalid');
+
+            await this.sleep(400);
+
             [this.board[row1][col1], this.board[row2][col2]] =
             [this.board[row2][col2], this.board[row1][col1]];
             this.render();
@@ -389,9 +397,9 @@ class VibeMatcherGame {
                 piece.dataset.row = row;
                 piece.dataset.col = col;
 
-                // Add emoji based on vibe type
-                const emojis = ['💖', '💙', '💜', '💚', '🧡', '💛', '🩷', '❤️'];
-                piece.textContent = emojis[vibeType];
+                // Add symbol based on vibe type - geometric shapes for better visibility
+                const symbols = ['◆', '●', '■', '▲', '★', '◈', '⬢', '◉'];
+                piece.textContent = symbols[vibeType];
 
                 boardElement.appendChild(piece);
             }
