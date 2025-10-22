@@ -1,0 +1,180 @@
+# Vibe Matcher - Claude Context File
+
+## Project Overview
+Mobile-friendly match-3 puzzle game called "Vibe Matcher", inspired by Fishdom. Hosted entirely on GitHub Pages with automatic deployment via GitHub Actions.
+
+**Target User**: Created for a kiddo who loves Fishdom
+**Platform**: Mobile-first browser game (especially Safari iOS)
+**Tech Stack**: Vanilla HTML/CSS/JavaScript (no frameworks)
+**Deployment**: GitHub Actions auto-deploy to GitHub Pages
+
+## Current Version: v1.2.1
+
+## Key Files
+
+### index.html
+- Main game structure and UI layout
+- Mobile viewport with viewport-fit=cover for Safari
+- Responsive grid layout with flexbox
+- Version display in footer
+
+### styles.css
+- Pure black background (#000000)
+- Dark teal/cyan color scheme for all vibe types
+- All animations: screen shake (3 levels), Tetris-style falling, swap animations, particle bursts
+- Mobile-optimized with touch-friendly sizing
+- Special item styling with pulse animations
+
+### game.js
+- Core game logic in `VibeMatcherGame` class
+- Seeded random number generation for deterministic levels
+- Special items system (dynamite, bomb, nuclear)
+- Touch/swipe controls with tap-to-select-then-tap-to-swap
+- Async/await based animation system
+- Screen shake and particle burst effects
+
+### .github/workflows/deploy.yml
+- Auto-deploys to GitHub Pages on push to main or claude/** branches
+
+## Game Mechanics
+
+### Board & Pieces
+- 8x8 grid with 8 vibe types (geometric symbols: ◆●■▲★◈⬢◉)
+- All swaps allowed (not just match-making swaps) to enable combo setup
+- Match-3 or more horizontally or vertically
+- Cascading matches after pieces fall
+
+### Special Items (Added in v1.1.0)
+- 🧨 Dynamite (100): 3x3 explosion, 50 points per piece
+- 💣 Bomb (101): 5x5 explosion, 150 points per piece
+- ☢️ Nuclear (102): 7x7 explosion, 300 points per piece
+- Spawn probability increases with level
+- Triggered by swapping with them
+
+### Level System
+- Target score increases by 1.5x each level
+- 30 moves per level
+- Seeded random (seed = level * 12345) for reproducibility
+- Level completes immediately when target score reached
+- Game over if moves run out before reaching target
+
+### Visual Effects (Added throughout)
+- Screen shake (small/medium/big based on match size)
+- Particle burst explosions on all matches
+- Smooth swap animations with rotation and scaling
+- Tetris-style falling animation with staggered column delays
+
+### Touch Controls (Critical for Safari)
+- Tap to select, tap adjacent to swap
+- Swipe in any direction to swap
+- All touch events use preventDefault with {passive: false}
+- Works with both touch and mouse events
+
+## Technical Implementation Details
+
+### Seeded Random
+```javascript
+seededRandom(seed) {
+    return function() {
+        seed = (seed * 9301 + 49297) % 233280;
+        return seed / 233280;
+    };
+}
+```
+
+### Level Complete Trigger (v1.2.1 Fix)
+- CRITICAL: checkLevelStatus() must be called AFTER isProcessing is set to false
+- This ensures game state is fully settled before showing overlay
+- Previously caused bug where reaching target (8k on 1k) didn't trigger level complete
+
+### Animation Flow
+1. swapPieces() sets isProcessing = true
+2. Swap animation plays
+3. processMatches() handles cascading matches
+4. isProcessing = false
+5. checkLevelStatus() checks for level complete or game over
+
+### Special Item Flow
+- When special item is swapped, triggerSpecialItem() is called
+- Explosion area calculated based on radius
+- Screen shake and particles triggered
+- Points awarded and pieces removed
+- processMatches() checks for cascades
+- checkLevelStatus() called by caller after isProcessing = false
+
+## Safari Mobile Fixes (Critical)
+
+### Viewport Issues
+- Used position:fixed on html/body with simple 100% height
+- Avoided dvh units and -webkit-fill-available (caused issues)
+- Removed complex safe-area handling
+
+### Touch Events
+- ALL touch events must preventDefault with {passive: false}
+- Register preventDefault handlers BEFORE main touch handlers
+- Lower swipe threshold (15px) for faster response
+
+### Board Sizing
+- max-width/max-height constraints prevent truncation
+- overflow: hidden prevents scrolling
+- Reduced padding for larger visible area
+
+## Color Scheme (Dark Teal Theme)
+
+### Background
+- Pure black (#000000)
+- Dark slate gradient on container
+
+### Vibe Colors (All Teal/Cyan Variants)
+- vibe-0: #14b8a6 (teal-500)
+- vibe-1: #06b6d4 (cyan-500)
+- vibe-2: #0891b2 (cyan-600)
+- vibe-3: #0e7490 (cyan-700)
+- vibe-4: #0d9488 (teal-600)
+- vibe-5: #0f766e (teal-700)
+- vibe-6: #5eead4 (teal-300)
+- vibe-7: #2dd4bf (teal-400)
+
+## Known Issues & Fixes
+
+### FIXED in v1.2.1
+- Level not completing when target score reached
+- Solution: Call checkLevelStatus() after isProcessing = false
+
+### FIXED in v1.2.0
+- Added Tetris-style falling animations
+
+### FIXED in v1.1.0
+- Added special power-up items
+
+### FIXED in v1.0.0
+- Safari browser bar covering buttons
+- Swipe not working on mobile
+- Board truncation (right side cut off by 70%)
+- Swaps only working for matches (now all swaps work)
+
+## Development Workflow
+
+1. Make changes locally
+2. Git add/commit with descriptive messages
+3. Push to claude/github-game-prototype-011CUMBnvwesYGchJP9JLQBX branch
+4. GitHub Actions auto-deploys to Pages
+5. Test on mobile Safari
+
+## Important Notes
+
+- NEVER use git commands with -i flag (no interactive mode)
+- Always commit with heredoc for proper formatting
+- Include "Generated with Claude Code" footer in commits
+- Test on actual mobile device, especially Safari iOS
+- All animations use CSS transforms for better performance
+- LocalStorage used for high score persistence only
+
+## Future Considerations
+
+- More special items or power-ups
+- Sound effects
+- More level variety (different board sizes, obstacles)
+- Combo multipliers
+- Achievement system
+- Sharing high scores
