@@ -214,13 +214,35 @@ class VibeMatcherGame {
                         // Adjacent pieces - swap them
                         this.swapPieces(selectedRow, selectedCol, touchStartRow, touchStartCol);
                     } else {
-                        // Not adjacent - deselect old, select new
+                        // Not adjacent - deselect old and check if new piece is special
                         this.deselectPiece();
-                        this.selectPiece(touchStartRow, touchStartCol);
+                        const tappedValue = this.board[touchStartRow][touchStartCol];
+                        if (this.isSpecialItem(tappedValue)) {
+                            // Trigger the special item explosion immediately
+                            this.isProcessing = true;
+                            this.triggerSpecialItem(touchStartRow, touchStartCol, tappedValue).then(() => {
+                                this.isProcessing = false;
+                                this.checkLevelStatus();
+                            });
+                        } else {
+                            // Regular piece - select it
+                            this.selectPiece(touchStartRow, touchStartCol);
+                        }
                     }
                 } else if (!this.selectedPiece) {
-                    // Nothing selected yet - select this piece
-                    this.selectPiece(touchStartRow, touchStartCol);
+                    // Nothing selected yet - check if it's a special item
+                    const tappedValue = this.board[touchStartRow][touchStartCol];
+                    if (this.isSpecialItem(tappedValue)) {
+                        // Trigger the special item explosion immediately
+                        this.isProcessing = true;
+                        this.triggerSpecialItem(touchStartRow, touchStartCol, tappedValue).then(() => {
+                            this.isProcessing = false;
+                            this.checkLevelStatus();
+                        });
+                    } else {
+                        // Regular piece - select it
+                        this.selectPiece(touchStartRow, touchStartCol);
+                    }
                 } else {
                     // Tapped the same piece - deselect it
                     this.deselectPiece();
