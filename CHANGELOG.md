@@ -5,6 +5,22 @@ All notable changes to Vibe Matcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2025-10-22
+
+### Added
+- Tap-to-explode functionality for special items (dynamite, bombs, nuclear)
+- Special items can now be triggered by tapping them directly without requiring a swap
+- More intuitive and strategic gameplay - explode bombs exactly when you want
+
+### Fixed
+- Fixed falling animation bug where pieces appeared to flow from left to right like a wave
+- Pieces now properly fall straight down from top to bottom after elimination
+- Removed column-based animation delay that caused the incorrect wave effect
+
+### Changed
+- All pieces now fall simultaneously from the top, creating a proper gravity-based effect
+- Special items are immediately triggered when tapped, even if another piece is selected
+
 ## [1.2.2] - 2025-10-22
 
 ### Fixed
