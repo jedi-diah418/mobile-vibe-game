@@ -6,6 +6,7 @@ class AudioManager {
         this.sfxGainNode = null;
         this.musicLoopTimeout = null;
         this.musicLoopId = 0; // Unique ID to prevent layering
+        this.musicStarted = false; // Track if music has been started
 
         // Load mute preference from localStorage
         const savedMute = localStorage.getItem('vibeMatcher_muted');
@@ -27,15 +28,16 @@ class AudioManager {
             this.sfxGainNode = this.audioContext.createGain();
             this.sfxGainNode.connect(this.audioContext.destination);
             this.sfxGainNode.gain.value = 0.5; // Sound effects at 50% volume
+
+            // Start background music only when first creating audio context
+            if (!this.isMuted && !this.musicStarted) {
+                this.startBackgroundMusic();
+            }
         }
 
         // Resume audio context if suspended (required by browser autoplay policies)
         if (this.audioContext && this.audioContext.state === 'suspended') {
             this.audioContext.resume();
-        }
-
-        if (!this.isMuted && this.audioContext) {
-            this.startBackgroundMusic();
         }
     }
 
@@ -48,16 +50,21 @@ class AudioManager {
         } else {
             // Initialize and resume audio context on unmute
             this.init();
+            // Explicitly start background music when unmuting
+            this.startBackgroundMusic();
         }
 
         return this.isMuted;
     }
 
     startBackgroundMusic() {
-        if (!this.audioContext || this.isMuted) return;
+        if (!this.audioContext || this.isMuted || this.musicStarted) return;
 
         // Stop any existing music loops
         this.stopBackgroundMusic();
+
+        // Mark music as started
+        this.musicStarted = true;
 
         // Increment loop ID to invalidate any pending loops
         this.musicLoopId++;
@@ -142,6 +149,8 @@ class AudioManager {
         }
         // Increment to invalidate any running loops
         this.musicLoopId++;
+        // Mark music as stopped so it can be started again
+        this.musicStarted = false;
     }
 
     playSwapSound() {
