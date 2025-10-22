@@ -5,6 +5,23 @@ All notable changes to Vibe Matcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2025-10-22
+
+### Added
+- Sound effects and background music system using Web Audio API
+- Procedurally generated sound effects:
+  - Swap sound when pieces are swapped
+  - Match sounds that vary by match size (bigger matches = higher pitch)
+  - Explosion sounds for special items with noise and bass
+  - Victory melody when completing a level
+- Looping background music with simple upbeat melody
+- Mute button to toggle all audio on/off (defaults to muted)
+- Audio preference saved to localStorage
+
+### Changed
+- Audio initializes on first user interaction to comply with browser autoplay policies
+- Mute button shows current state: "🔇 Muted" or "🔊 Sound On"
+
 ## [1.3.0] - 2025-10-22
 
 ### Added

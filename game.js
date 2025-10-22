@@ -1,3 +1,224 @@
+class AudioManager {
+    constructor() {
+        this.audioContext = null;
+        this.isMuted = true; // Default to muted
+        this.backgroundMusic = null;
+        this.musicGainNode = null;
+        this.sfxGainNode = null;
+
+        // Load mute preference from localStorage
+        const savedMute = localStorage.getItem('vibeMatcher_muted');
+        if (savedMute !== null) {
+            this.isMuted = savedMute === 'true';
+        }
+    }
+
+    init() {
+        // Initialize audio context on first user interaction
+        if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+            // Create gain nodes for volume control
+            this.musicGainNode = this.audioContext.createGain();
+            this.musicGainNode.connect(this.audioContext.destination);
+            this.musicGainNode.gain.value = 0.3; // Background music at 30% volume
+
+            this.sfxGainNode = this.audioContext.createGain();
+            this.sfxGainNode.connect(this.audioContext.destination);
+            this.sfxGainNode.gain.value = 0.5; // Sound effects at 50% volume
+
+            if (!this.isMuted) {
+                this.startBackgroundMusic();
+            }
+        }
+    }
+
+    toggleMute() {
+        this.isMuted = !this.isMuted;
+        localStorage.setItem('vibeMatcher_muted', this.isMuted.toString());
+
+        if (this.isMuted) {
+            this.stopBackgroundMusic();
+        } else {
+            this.init(); // Initialize if not already done
+            this.startBackgroundMusic();
+        }
+
+        return this.isMuted;
+    }
+
+    startBackgroundMusic() {
+        if (!this.audioContext || this.isMuted) return;
+
+        // Create a simple looping background melody
+        const now = this.audioContext.currentTime;
+        this.playBackgroundLoop(now);
+    }
+
+    playBackgroundLoop(startTime) {
+        if (this.isMuted || !this.audioContext) return;
+
+        // Simple upbeat melody pattern
+        const notes = [523.25, 587.33, 659.25, 783.99, 659.25, 587.33]; // C5, D5, E5, G5, E5, D5
+        const noteDuration = 0.4;
+
+        notes.forEach((freq, i) => {
+            const osc = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+
+            osc.connect(gainNode);
+            gainNode.connect(this.musicGainNode);
+
+            osc.frequency.value = freq;
+            osc.type = 'sine';
+
+            const noteStart = startTime + (i * noteDuration);
+            gainNode.gain.setValueAtTime(0, noteStart);
+            gainNode.gain.linearRampToValueAtTime(0.15, noteStart + 0.05);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, noteStart + noteDuration);
+
+            osc.start(noteStart);
+            osc.stop(noteStart + noteDuration);
+        });
+
+        // Schedule next loop
+        const loopDuration = notes.length * noteDuration;
+        setTimeout(() => {
+            if (!this.isMuted) {
+                this.playBackgroundLoop(this.audioContext.currentTime);
+            }
+        }, loopDuration * 1000);
+    }
+
+    stopBackgroundMusic() {
+        // Music naturally stops when muted flag is checked
+    }
+
+    playSwapSound() {
+        if (this.isMuted || !this.audioContext) return;
+        this.init();
+
+        const now = this.audioContext.currentTime;
+        const osc = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+
+        osc.connect(gainNode);
+        gainNode.connect(this.sfxGainNode);
+
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
+        osc.type = 'sine';
+
+        gainNode.gain.setValueAtTime(0.3, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+
+        osc.start(now);
+        osc.stop(now + 0.1);
+    }
+
+    playMatchSound(matchSize) {
+        if (this.isMuted || !this.audioContext) return;
+        this.init();
+
+        const now = this.audioContext.currentTime;
+        const baseFreq = 300 + (matchSize * 50);
+
+        // Play a chord
+        [0, 4, 7].forEach((semitone, i) => {
+            const osc = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+
+            osc.connect(gainNode);
+            gainNode.connect(this.sfxGainNode);
+
+            osc.frequency.value = baseFreq * Math.pow(2, semitone / 12);
+            osc.type = 'triangle';
+
+            gainNode.gain.setValueAtTime(0.2, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+
+            osc.start(now + i * 0.02);
+            osc.stop(now + 0.3);
+        });
+    }
+
+    playExplosionSound(size) {
+        if (this.isMuted || !this.audioContext) return;
+        this.init();
+
+        const now = this.audioContext.currentTime;
+
+        // Create explosion with noise and descending tone
+        const noiseBuffer = this.audioContext.createBuffer(1, this.audioContext.sampleRate * 0.5, this.audioContext.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < output.length; i++) {
+            output[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = this.audioContext.createBufferSource();
+        noise.buffer = noiseBuffer;
+
+        const noiseFilter = this.audioContext.createBiquadFilter();
+        noiseFilter.type = 'lowpass';
+        noiseFilter.frequency.value = 1000;
+
+        const noiseGain = this.audioContext.createGain();
+        noise.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(this.sfxGainNode);
+
+        const volume = 0.3 + (size * 0.1);
+        noiseGain.gain.setValueAtTime(volume, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+
+        noise.start(now);
+        noise.stop(now + 0.5);
+
+        // Add bass thump
+        const osc = this.audioContext.createOscillator();
+        const oscGain = this.audioContext.createGain();
+
+        osc.connect(oscGain);
+        oscGain.connect(this.sfxGainNode);
+
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(50, now + 0.3);
+        osc.type = 'sine';
+
+        oscGain.gain.setValueAtTime(0.5, now);
+        oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+
+        osc.start(now);
+        osc.stop(now + 0.3);
+    }
+
+    playLevelCompleteSound() {
+        if (this.isMuted || !this.audioContext) return;
+        this.init();
+
+        const now = this.audioContext.currentTime;
+        const melody = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+
+        melody.forEach((freq, i) => {
+            const osc = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+
+            osc.connect(gainNode);
+            gainNode.connect(this.sfxGainNode);
+
+            osc.frequency.value = freq;
+            osc.type = 'sine';
+
+            const noteStart = now + (i * 0.15);
+            gainNode.gain.setValueAtTime(0.3, noteStart);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, noteStart + 0.3);
+
+            osc.start(noteStart);
+            osc.stop(noteStart + 0.3);
+        });
+    }
+}
+
 class VibeMatcherGame {
     constructor() {
         this.boardSize = 8;
@@ -22,10 +243,19 @@ class VibeMatcherGame {
         this.levelSeed = this.level * 12345;
         this.rng = this.seededRandom(this.levelSeed);
 
+        // Initialize audio manager
+        this.audioManager = new AudioManager();
+
         this.initializeBoard();
         this.setupEventListeners();
         this.render();
         this.updateUI();
+
+        // Initialize mute button text
+        const muteButton = document.getElementById('mute-button');
+        if (muteButton) {
+            muteButton.textContent = this.audioManager.isMuted ? '🔇 Muted' : '🔊 Sound On';
+        }
     }
 
     // Seeded random number generator for deterministic levels
@@ -265,6 +495,12 @@ class VibeMatcherGame {
             this.showHint();
         });
 
+        document.getElementById('mute-button').addEventListener('click', () => {
+            const isMuted = this.audioManager.toggleMute();
+            const button = document.getElementById('mute-button');
+            button.textContent = isMuted ? '🔇 Muted' : '🔊 Sound On';
+        });
+
         document.getElementById('message-button').addEventListener('click', () => {
             this.nextLevel();
         });
@@ -309,6 +545,9 @@ class VibeMatcherGame {
 
     async swapPieces(row1, col1, row2, col2) {
         this.isProcessing = true;
+
+        // Play swap sound
+        this.audioManager.playSwapSound();
 
         // Add swapping animation
         const piece1 = document.querySelector(`[data-row="${row1}"][data-col="${col1}"]`);
@@ -381,6 +620,7 @@ class VibeMatcherGame {
 
         // Check if level is complete (target score reached)
         if (this.score >= this.targetScore && !isOverlayShowing) {
+            this.audioManager.playLevelCompleteSound();
             this.showMessage('Level Complete!', `Amazing! You scored ${this.score} points! Ready for the next level?`, 'Next Level');
         }
         // Check for game over (out of moves but didn't reach target)
@@ -414,6 +654,9 @@ class VibeMatcherGame {
 
         // MASSIVE screen shake for explosions!
         this.screenShake(toDestroy.length);
+
+        // Play explosion sound
+        this.audioManager.playExplosionSound(radius);
 
         // Highlight all pieces to be destroyed
         toDestroy.forEach(([r, c]) => {
@@ -503,6 +746,9 @@ class VibeMatcherGame {
         while (matches.length > 0) {
             // SCREEN SHAKE for ALL matches! Scale intensity by match size
             this.screenShake(matches.length);
+
+            // Play match sound
+            this.audioManager.playMatchSound(matches.length);
 
             // Highlight matched pieces and create particles
             matches.forEach(([row, col]) => {
