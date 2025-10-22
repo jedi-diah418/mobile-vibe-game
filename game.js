@@ -26,10 +26,15 @@ class AudioManager {
             this.sfxGainNode = this.audioContext.createGain();
             this.sfxGainNode.connect(this.audioContext.destination);
             this.sfxGainNode.gain.value = 0.5; // Sound effects at 50% volume
+        }
 
-            if (!this.isMuted) {
-                this.startBackgroundMusic();
-            }
+        // Resume audio context if suspended (required by browser autoplay policies)
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
+
+        if (!this.isMuted && this.audioContext) {
+            this.startBackgroundMusic();
         }
     }
 
@@ -40,8 +45,8 @@ class AudioManager {
         if (this.isMuted) {
             this.stopBackgroundMusic();
         } else {
-            this.init(); // Initialize if not already done
-            this.startBackgroundMusic();
+            // Initialize and resume audio context on unmute
+            this.init();
         }
 
         return this.isMuted;
@@ -95,8 +100,9 @@ class AudioManager {
     }
 
     playSwapSound() {
-        if (this.isMuted || !this.audioContext) return;
+        if (this.isMuted) return;
         this.init();
+        if (!this.audioContext) return;
 
         const now = this.audioContext.currentTime;
         const osc = this.audioContext.createOscillator();
@@ -117,8 +123,9 @@ class AudioManager {
     }
 
     playMatchSound(matchSize) {
-        if (this.isMuted || !this.audioContext) return;
+        if (this.isMuted) return;
         this.init();
+        if (!this.audioContext) return;
 
         const now = this.audioContext.currentTime;
         const baseFreq = 300 + (matchSize * 50);
@@ -143,8 +150,9 @@ class AudioManager {
     }
 
     playExplosionSound(size) {
-        if (this.isMuted || !this.audioContext) return;
+        if (this.isMuted) return;
         this.init();
+        if (!this.audioContext) return;
 
         const now = this.audioContext.currentTime;
 
@@ -193,8 +201,9 @@ class AudioManager {
     }
 
     playLevelCompleteSound() {
-        if (this.isMuted || !this.audioContext) return;
+        if (this.isMuted) return;
         this.init();
+        if (!this.audioContext) return;
 
         const now = this.audioContext.currentTime;
         const melody = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
