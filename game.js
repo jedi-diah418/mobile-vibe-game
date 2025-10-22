@@ -724,6 +724,7 @@ class VibeMatcherGame {
     nextLevel() {
         if (this.score >= this.targetScore) {
             this.level++;
+            this.score = 0; // Reset score for new level
             this.levelSeed = this.level * 12345; // Update seed for new level
             this.targetScore = Math.floor(this.targetScore * 1.5);
             this.moves = 30;
