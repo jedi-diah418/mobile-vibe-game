@@ -11,25 +11,82 @@ class VibeMatcherGame {
         this.isProcessing = false;
         this.highScore = this.loadHighScore();
 
+        // Special item types
+        this.SPECIAL_ITEMS = {
+            DYNAMITE: 100,  // 3x3 explosion
+            BOMB: 101,      // 5x5 explosion
+            NUCLEAR: 102    // 7x7 explosion
+        };
+
+        // Seeded random for deterministic levels
+        this.levelSeed = this.level * 12345;
+        this.rng = this.seededRandom(this.levelSeed);
+
         this.initializeBoard();
         this.setupEventListeners();
         this.render();
         this.updateUI();
     }
 
+    // Seeded random number generator for deterministic levels
+    seededRandom(seed) {
+        return function() {
+            seed = (seed * 9301 + 49297) % 233280;
+            return seed / 233280;
+        };
+    }
+
     initializeBoard() {
+        // Reset seeded random for this level
+        this.rng = this.seededRandom(this.levelSeed);
+
         // Generate initial board without matches
         this.board = [];
         for (let row = 0; row < this.boardSize; row++) {
             this.board[row] = [];
             for (let col = 0; col < this.boardSize; col++) {
-                let vibeType;
-                do {
-                    vibeType = Math.floor(Math.random() * this.vibeTypes);
-                } while (this.wouldCreateMatch(row, col, vibeType));
-                this.board[row][col] = vibeType;
+                // Check if we should spawn a special item
+                const specialItem = this.maybeSpawnSpecialItem(true);
+                if (specialItem !== null) {
+                    this.board[row][col] = specialItem;
+                } else {
+                    let vibeType;
+                    do {
+                        vibeType = Math.floor(this.rng() * this.vibeTypes);
+                    } while (this.wouldCreateMatch(row, col, vibeType));
+                    this.board[row][col] = vibeType;
+                }
             }
         }
+    }
+
+    maybeSpawnSpecialItem(isInitialBoard = false) {
+        // Probability increases with level
+        const baseChance = isInitialBoard ? 0.02 : 0.05;
+        const levelBonus = (this.level - 1) * 0.01;
+        const spawnChance = Math.min(baseChance + levelBonus, 0.15);
+
+        if (this.rng() < spawnChance) {
+            const roll = this.rng();
+
+            // Higher levels increase chance of better items
+            const nuclearThreshold = 0.05 + (this.level * 0.01);
+            const bombThreshold = 0.20 + (this.level * 0.02);
+
+            if (roll < nuclearThreshold) {
+                return this.SPECIAL_ITEMS.NUCLEAR;
+            } else if (roll < bombThreshold) {
+                return this.SPECIAL_ITEMS.BOMB;
+            } else {
+                return this.SPECIAL_ITEMS.DYNAMITE;
+            }
+        }
+
+        return null;
+    }
+
+    isSpecialItem(value) {
+        return value >= 100;
     }
 
     wouldCreateMatch(row, col, vibeType) {
@@ -239,6 +296,30 @@ class VibeMatcherGame {
 
         await this.sleep(150);
 
+        // Check if either piece is a special item that should trigger
+        const val1 = this.board[row1][col1];
+        const val2 = this.board[row2][col2];
+
+        if (this.isSpecialItem(val1)) {
+            // Special item at position 1 - trigger explosion
+            await this.triggerSpecialItem(row1, col1, val1);
+            this.moves--;
+            this.render();
+            this.deselectPiece();
+            this.updateUI();
+            this.isProcessing = false;
+            return;
+        } else if (this.isSpecialItem(val2)) {
+            // Special item at position 2 - trigger explosion
+            await this.triggerSpecialItem(row2, col2, val2);
+            this.moves--;
+            this.render();
+            this.deselectPiece();
+            this.updateUI();
+            this.isProcessing = false;
+            return;
+        }
+
         // Swap in board array - always allow the swap
         [this.board[row1][col1], this.board[row2][col2]] =
         [this.board[row2][col2], this.board[row1][col1]];
@@ -266,6 +347,65 @@ class VibeMatcherGame {
         }
 
         this.isProcessing = false;
+    }
+
+    async triggerSpecialItem(row, col, itemType) {
+        let radius;
+        let scoreMultiplier;
+
+        if (itemType === this.SPECIAL_ITEMS.DYNAMITE) {
+            radius = 1; // 3x3
+            scoreMultiplier = 50;
+        } else if (itemType === this.SPECIAL_ITEMS.BOMB) {
+            radius = 2; // 5x5
+            scoreMultiplier = 150;
+        } else if (itemType === this.SPECIAL_ITEMS.NUCLEAR) {
+            radius = 3; // 7x7
+            scoreMultiplier = 300;
+        }
+
+        // Collect all pieces to destroy
+        const toDestroy = [];
+        for (let r = Math.max(0, row - radius); r <= Math.min(this.boardSize - 1, row + radius); r++) {
+            for (let c = Math.max(0, col - radius); c <= Math.min(this.boardSize - 1, col + radius); c++) {
+                toDestroy.push([r, c]);
+            }
+        }
+
+        // MASSIVE screen shake for explosions!
+        this.screenShake(toDestroy.length);
+
+        // Highlight all pieces to be destroyed
+        toDestroy.forEach(([r, c]) => {
+            const piece = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+            if (piece) {
+                piece.classList.add('matched');
+                // Create particles at each destroyed piece
+                this.createParticleBurst(piece, toDestroy.length);
+            }
+        });
+
+        await this.sleep(500);
+
+        // Award points
+        const points = toDestroy.length * scoreMultiplier;
+        this.score += points;
+        this.updateUI();
+
+        // Remove all destroyed pieces
+        toDestroy.forEach(([r, c]) => {
+            this.board[r][c] = null;
+        });
+
+        // Apply gravity and fill
+        this.applyGravity();
+        this.fillBoard();
+        this.render();
+
+        await this.sleep(400);
+
+        // Check for cascading matches
+        await this.processMatches();
     }
 
     findMatches() {
@@ -437,7 +577,13 @@ class VibeMatcherGame {
         for (let row = 0; row < this.boardSize; row++) {
             for (let col = 0; col < this.boardSize; col++) {
                 if (this.board[row][col] === null) {
-                    this.board[row][col] = Math.floor(Math.random() * this.vibeTypes);
+                    // Chance to spawn special item
+                    const specialItem = this.maybeSpawnSpecialItem(false);
+                    if (specialItem !== null) {
+                        this.board[row][col] = specialItem;
+                    } else {
+                        this.board[row][col] = Math.floor(this.rng() * this.vibeTypes);
+                    }
                 }
             }
         }
@@ -451,13 +597,29 @@ class VibeMatcherGame {
             for (let col = 0; col < this.boardSize; col++) {
                 const vibeType = this.board[row][col];
                 const piece = document.createElement('div');
-                piece.className = `vibe-piece vibe-${vibeType}`;
+
+                // Check if it's a special item
+                if (this.isSpecialItem(vibeType)) {
+                    piece.className = `vibe-piece special-item special-${vibeType}`;
+
+                    // Special item emojis
+                    if (vibeType === this.SPECIAL_ITEMS.DYNAMITE) {
+                        piece.textContent = '🧨';
+                    } else if (vibeType === this.SPECIAL_ITEMS.BOMB) {
+                        piece.textContent = '💣';
+                    } else if (vibeType === this.SPECIAL_ITEMS.NUCLEAR) {
+                        piece.textContent = '☢️';
+                    }
+                } else {
+                    piece.className = `vibe-piece vibe-${vibeType}`;
+
+                    // Add symbol based on vibe type - geometric shapes for better visibility
+                    const symbols = ['◆', '●', '■', '▲', '★', '◈', '⬢', '◉'];
+                    piece.textContent = symbols[vibeType];
+                }
+
                 piece.dataset.row = row;
                 piece.dataset.col = col;
-
-                // Add symbol based on vibe type - geometric shapes for better visibility
-                const symbols = ['◆', '●', '■', '▲', '★', '◈', '⬢', '◉'];
-                piece.textContent = symbols[vibeType];
 
                 boardElement.appendChild(piece);
             }
@@ -490,6 +652,7 @@ class VibeMatcherGame {
     nextLevel() {
         if (this.score >= this.targetScore) {
             this.level++;
+            this.levelSeed = this.level * 12345; // Update seed for new level
             this.targetScore = Math.floor(this.targetScore * 1.5);
             this.moves = 30;
             this.initializeBoard();
@@ -509,6 +672,7 @@ class VibeMatcherGame {
 
         this.score = 0;
         this.level = 1;
+        this.levelSeed = this.level * 12345; // Reset seed
         this.moves = 30;
         this.targetScore = 1000;
         this.initializeBoard();

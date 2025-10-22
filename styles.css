@@ -331,6 +331,40 @@ body {
 .vibe-6 { background: linear-gradient(135deg, #00bcd4 0%, #0097a7 100%); box-shadow: 0 2px 8px rgba(0, 188, 212, 0.4); } /* Deep cyan */
 .vibe-7 { background: linear-gradient(135deg, #26a69a 0%, #00897b 100%); box-shadow: 0 2px 8px rgba(38, 166, 154, 0.4); } /* Teal dark */
 
+/* Special items */
+.special-item {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+    box-shadow: 0 0 15px rgba(255, 107, 107, 0.6);
+    animation: pulse 1.5s ease-in-out infinite;
+    font-size: 32px !important;
+}
+
+.special-100 { /* Dynamite */
+    background: linear-gradient(135deg, #ff9500 0%, #ff5e00 100%);
+    box-shadow: 0 0 12px rgba(255, 149, 0, 0.7);
+}
+
+.special-101 { /* Bomb */
+    background: linear-gradient(135deg, #ff3838 0%, #c21500 100%);
+    box-shadow: 0 0 15px rgba(255, 56, 56, 0.8);
+}
+
+.special-102 { /* Nuclear */
+    background: linear-gradient(135deg, #00ff88 0%, #00cc44 100%);
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.9);
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 15px rgba(255, 107, 107, 0.6);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 25px rgba(255, 107, 107, 0.9);
+    }
+}
+
 .message-overlay {
     position: absolute;
     top: 0;
@@ -429,6 +463,15 @@ body {
     font-weight: 600;
     color: #64ffda;
     font-size: 14px;
+}
+
+.version {
+    position: absolute;
+    bottom: 4px;
+    right: 8px;
+    font-size: 10px;
+    color: rgba(100, 255, 218, 0.4);
+    font-weight: 500;
 }
 
 /* Additional mobile optimizations */
