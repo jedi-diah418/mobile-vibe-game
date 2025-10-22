@@ -319,10 +319,8 @@ class VibeMatcherGame {
         let matches = this.findMatches();
 
         while (matches.length > 0) {
-            // SCREEN SHAKE for big matches
-            if (matches.length >= 4) {
-                this.screenShake();
-            }
+            // SCREEN SHAKE for ALL matches! Scale intensity by match size
+            this.screenShake(matches.length);
 
             // Highlight matched pieces and create particles
             matches.forEach(([row, col]) => {
@@ -362,11 +360,23 @@ class VibeMatcherGame {
         }
     }
 
-    screenShake() {
+    screenShake(matchCount = 3) {
         const container = document.querySelector('.game-container');
-        container.classList.add('shake');
+
+        // Remove any existing shake class first
+        container.classList.remove('shake', 'shake-small', 'shake-medium', 'shake-big');
+
+        // Add appropriate shake class based on match size
+        if (matchCount >= 6) {
+            container.classList.add('shake-big');
+        } else if (matchCount >= 4) {
+            container.classList.add('shake-medium');
+        } else {
+            container.classList.add('shake-small');
+        }
+
         setTimeout(() => {
-            container.classList.remove('shake');
+            container.classList.remove('shake', 'shake-small', 'shake-medium', 'shake-big');
         }, 500);
     }
 
@@ -375,16 +385,17 @@ class VibeMatcherGame {
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
 
-        // More particles for bigger matches
-        const particleCount = Math.min(matchCount * 3, 20);
+        // More particles for ALL matches, even more for big ones
+        const baseParticles = 8; // Minimum particles even for match-3
+        const particleCount = Math.min(baseParticles + (matchCount * 2), 25);
 
         for (let i = 0; i < particleCount; i++) {
             const particle = document.createElement('div');
             particle.className = 'particle';
 
-            // Random direction
-            const angle = (Math.PI * 2 * i) / particleCount;
-            const velocity = 40 + Math.random() * 60;
+            // Random direction with some variation
+            const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.5;
+            const velocity = 50 + Math.random() * 80; // Faster, more energetic
             const tx = Math.cos(angle) * velocity;
             const ty = Math.sin(angle) * velocity;
 
@@ -392,6 +403,11 @@ class VibeMatcherGame {
             particle.style.top = `${centerY}px`;
             particle.style.setProperty('--tx', `${tx}px`);
             particle.style.setProperty('--ty', `${ty}px`);
+
+            // Randomize particle size slightly
+            const size = 6 + Math.random() * 6;
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
 
             document.body.appendChild(particle);
 
