@@ -2,9 +2,10 @@ class AudioManager {
     constructor() {
         this.audioContext = null;
         this.isMuted = true; // Default to muted
-        this.backgroundMusic = null;
         this.musicGainNode = null;
         this.sfxGainNode = null;
+        this.musicLoopTimeout = null;
+        this.musicLoopId = 0; // Unique ID to prevent layering
 
         // Load mute preference from localStorage
         const savedMute = localStorage.getItem('vibeMatcher_muted');
@@ -55,48 +56,92 @@ class AudioManager {
     startBackgroundMusic() {
         if (!this.audioContext || this.isMuted) return;
 
-        // Create a simple looping background melody
+        // Stop any existing music loops
+        this.stopBackgroundMusic();
+
+        // Increment loop ID to invalidate any pending loops
+        this.musicLoopId++;
+
+        // Start new background melody
         const now = this.audioContext.currentTime;
-        this.playBackgroundLoop(now);
+        this.playBackgroundLoop(now, this.musicLoopId);
     }
 
-    playBackgroundLoop(startTime) {
-        if (this.isMuted || !this.audioContext) return;
+    playBackgroundLoop(startTime, loopId) {
+        // Check if this loop was cancelled
+        if (this.isMuted || !this.audioContext || loopId !== this.musicLoopId) return;
 
-        // Simple upbeat melody pattern
-        const notes = [523.25, 587.33, 659.25, 783.99, 659.25, 587.33]; // C5, D5, E5, G5, E5, D5
-        const noteDuration = 0.4;
+        // Whimsical bouncy melody - like a music box or carousel
+        const melody = [
+            { freq: 523.25, dur: 0.15 }, // C5
+            { freq: 659.25, dur: 0.15 }, // E5
+            { freq: 783.99, dur: 0.15 }, // G5
+            { freq: 1046.50, dur: 0.2 }, // C6 (hold)
+            { freq: 987.77, dur: 0.15 }, // B5
+            { freq: 783.99, dur: 0.15 }, // G5
+            { freq: 659.25, dur: 0.15 }, // E5
+            { freq: 523.25, dur: 0.3 }, // C5 (hold)
+        ];
 
-        notes.forEach((freq, i) => {
+        let currentTime = startTime;
+        melody.forEach((note, i) => {
             const osc = this.audioContext.createOscillator();
             const gainNode = this.audioContext.createGain();
 
             osc.connect(gainNode);
             gainNode.connect(this.musicGainNode);
 
-            osc.frequency.value = freq;
-            osc.type = 'sine';
+            osc.frequency.value = note.freq;
+            osc.type = 'square'; // Square wave for whimsical chiptune sound
 
-            const noteStart = startTime + (i * noteDuration);
-            gainNode.gain.setValueAtTime(0, noteStart);
-            gainNode.gain.linearRampToValueAtTime(0.15, noteStart + 0.05);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, noteStart + noteDuration);
+            gainNode.gain.setValueAtTime(0, currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.12, currentTime + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, currentTime + note.dur);
 
-            osc.start(noteStart);
-            osc.stop(noteStart + noteDuration);
+            osc.start(currentTime);
+            osc.stop(currentTime + note.dur);
+
+            currentTime += note.dur;
+        });
+
+        // Add a harmony layer for richness
+        currentTime = startTime;
+        melody.forEach((note, i) => {
+            const osc = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+
+            osc.connect(gainNode);
+            gainNode.connect(this.musicGainNode);
+
+            // Play a fifth above for harmony
+            osc.frequency.value = note.freq * 1.5;
+            osc.type = 'triangle';
+
+            gainNode.gain.setValueAtTime(0, currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.06, currentTime + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, currentTime + note.dur);
+
+            osc.start(currentTime);
+            osc.stop(currentTime + note.dur);
+
+            currentTime += note.dur;
         });
 
         // Schedule next loop
-        const loopDuration = notes.length * noteDuration;
-        setTimeout(() => {
-            if (!this.isMuted) {
-                this.playBackgroundLoop(this.audioContext.currentTime);
-            }
+        const loopDuration = melody.reduce((sum, note) => sum + note.dur, 0);
+        this.musicLoopTimeout = setTimeout(() => {
+            this.playBackgroundLoop(this.audioContext.currentTime, loopId);
         }, loopDuration * 1000);
     }
 
     stopBackgroundMusic() {
-        // Music naturally stops when muted flag is checked
+        // Clear any pending music timeouts
+        if (this.musicLoopTimeout) {
+            clearTimeout(this.musicLoopTimeout);
+            this.musicLoopTimeout = null;
+        }
+        // Increment to invalidate any running loops
+        this.musicLoopId++;
     }
 
     playSwapSound() {
@@ -105,21 +150,27 @@ class AudioManager {
         if (!this.audioContext) return;
 
         const now = this.audioContext.currentTime;
-        const osc = this.audioContext.createOscillator();
-        const gainNode = this.audioContext.createGain();
 
-        osc.connect(gainNode);
-        gainNode.connect(this.sfxGainNode);
+        // Bouncy "boing" sound with two quick notes
+        [0, 0.05].forEach((delay, i) => {
+            const osc = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
 
-        osc.frequency.setValueAtTime(400, now);
-        osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
-        osc.type = 'sine';
+            osc.connect(gainNode);
+            gainNode.connect(this.sfxGainNode);
 
-        gainNode.gain.setValueAtTime(0.3, now);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            const startTime = now + delay;
+            const freq = i === 0 ? 600 : 800; // Second note higher
+            osc.frequency.setValueAtTime(freq, startTime);
+            osc.frequency.exponentialRampToValueAtTime(freq * 1.3, startTime + 0.08);
+            osc.type = 'square';
 
-        osc.start(now);
-        osc.stop(now + 0.1);
+            gainNode.gain.setValueAtTime(0.25, startTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.08);
+
+            osc.start(startTime);
+            osc.stop(startTime + 0.08);
+        });
     }
 
     playMatchSound(matchSize) {
@@ -128,25 +179,48 @@ class AudioManager {
         if (!this.audioContext) return;
 
         const now = this.audioContext.currentTime;
-        const baseFreq = 300 + (matchSize * 50);
+        const baseFreq = 400 + (matchSize * 80);
 
-        // Play a chord
-        [0, 4, 7].forEach((semitone, i) => {
+        // Sparkly ascending arpeggio - like collecting coins or stars
+        [0, 4, 7, 12].forEach((semitone, i) => {
             const osc = this.audioContext.createOscillator();
             const gainNode = this.audioContext.createGain();
 
             osc.connect(gainNode);
             gainNode.connect(this.sfxGainNode);
 
-            osc.frequency.value = baseFreq * Math.pow(2, semitone / 12);
+            const freq = baseFreq * Math.pow(2, semitone / 12);
+            const startTime = now + (i * 0.04);
+
+            osc.frequency.value = freq;
             osc.type = 'triangle';
 
-            gainNode.gain.setValueAtTime(0.2, now);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            gainNode.gain.setValueAtTime(0, startTime);
+            gainNode.gain.linearRampToValueAtTime(0.22, startTime + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.25);
 
-            osc.start(now + i * 0.02);
-            osc.stop(now + 0.3);
+            osc.start(startTime);
+            osc.stop(startTime + 0.25);
         });
+
+        // Add a high sparkle on top for bigger matches
+        if (matchSize >= 4) {
+            const sparkle = this.audioContext.createOscillator();
+            const sparkleGain = this.audioContext.createGain();
+
+            sparkle.connect(sparkleGain);
+            sparkleGain.connect(this.sfxGainNode);
+
+            sparkle.frequency.setValueAtTime(2000, now);
+            sparkle.frequency.exponentialRampToValueAtTime(3000, now + 0.15);
+            sparkle.type = 'sine';
+
+            sparkleGain.gain.setValueAtTime(0.15, now);
+            sparkleGain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+            sparkle.start(now);
+            sparkle.stop(now + 0.15);
+        }
     }
 
     playExplosionSound(size) {
@@ -156,11 +230,30 @@ class AudioManager {
 
         const now = this.audioContext.currentTime;
 
-        // Create explosion with noise and descending tone
-        const noiseBuffer = this.audioContext.createBuffer(1, this.audioContext.sampleRate * 0.5, this.audioContext.sampleRate);
+        // Cartoon "boom" sound - bouncy and fun, not harsh
+        // Big descending "BWOM" sound
+        const boom = this.audioContext.createOscillator();
+        const boomGain = this.audioContext.createGain();
+
+        boom.connect(boomGain);
+        boomGain.connect(this.sfxGainNode);
+
+        boom.frequency.setValueAtTime(200, now);
+        boom.frequency.exponentialRampToValueAtTime(40, now + 0.25);
+        boom.type = 'sawtooth';
+
+        const volume = 0.35 + (size * 0.05);
+        boomGain.gain.setValueAtTime(volume, now);
+        boomGain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+
+        boom.start(now);
+        boom.stop(now + 0.25);
+
+        // Add a "poof" sound with filtered noise (much shorter and softer)
+        const noiseBuffer = this.audioContext.createBuffer(1, this.audioContext.sampleRate * 0.15, this.audioContext.sampleRate);
         const output = noiseBuffer.getChannelData(0);
         for (let i = 0; i < output.length; i++) {
-            output[i] = Math.random() * 2 - 1;
+            output[i] = (Math.random() * 2 - 1) * (1 - i / output.length); // Fade out
         }
 
         const noise = this.audioContext.createBufferSource();
@@ -168,36 +261,37 @@ class AudioManager {
 
         const noiseFilter = this.audioContext.createBiquadFilter();
         noiseFilter.type = 'lowpass';
-        noiseFilter.frequency.value = 1000;
+        noiseFilter.frequency.value = 800;
 
         const noiseGain = this.audioContext.createGain();
         noise.connect(noiseFilter);
         noiseFilter.connect(noiseGain);
         noiseGain.connect(this.sfxGainNode);
 
-        const volume = 0.3 + (size * 0.1);
-        noiseGain.gain.setValueAtTime(volume, now);
-        noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+        noiseGain.gain.setValueAtTime(0.2, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
 
         noise.start(now);
-        noise.stop(now + 0.5);
+        noise.stop(now + 0.15);
 
-        // Add bass thump
-        const osc = this.audioContext.createOscillator();
-        const oscGain = this.audioContext.createGain();
+        // Add celebratory "ding" for bigger explosions
+        if (size >= 2) {
+            const ding = this.audioContext.createOscillator();
+            const dingGain = this.audioContext.createGain();
 
-        osc.connect(oscGain);
-        oscGain.connect(this.sfxGainNode);
+            ding.connect(dingGain);
+            dingGain.connect(this.sfxGainNode);
 
-        osc.frequency.setValueAtTime(150, now);
-        osc.frequency.exponentialRampToValueAtTime(50, now + 0.3);
-        osc.type = 'sine';
+            ding.frequency.value = 1200;
+            ding.type = 'sine';
 
-        oscGain.gain.setValueAtTime(0.5, now);
-        oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            dingGain.gain.setValueAtTime(0, now + 0.05);
+            dingGain.gain.linearRampToValueAtTime(0.2, now + 0.08);
+            dingGain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
 
-        osc.start(now);
-        osc.stop(now + 0.3);
+            ding.start(now + 0.05);
+            ding.stop(now + 0.35);
+        }
     }
 
     playLevelCompleteSound() {
@@ -206,25 +300,74 @@ class AudioManager {
         if (!this.audioContext) return;
 
         const now = this.audioContext.currentTime;
-        const melody = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
 
-        melody.forEach((freq, i) => {
+        // Victory fanfare - cheerful and uplifting!
+        const fanfare = [
+            { freq: 523.25, dur: 0.12 }, // C5
+            { freq: 659.25, dur: 0.12 }, // E5
+            { freq: 783.99, dur: 0.12 }, // G5
+            { freq: 1046.50, dur: 0.2 }, // C6
+            { freq: 987.77, dur: 0.15 }, // B5
+            { freq: 1046.50, dur: 0.3 }, // C6 (hold for celebration!)
+        ];
+
+        let currentTime = now;
+        fanfare.forEach((note, i) => {
+            // Main melody
             const osc = this.audioContext.createOscillator();
             const gainNode = this.audioContext.createGain();
 
             osc.connect(gainNode);
             gainNode.connect(this.sfxGainNode);
 
-            osc.frequency.value = freq;
-            osc.type = 'sine';
+            osc.frequency.value = note.freq;
+            osc.type = 'square';
 
-            const noteStart = now + (i * 0.15);
-            gainNode.gain.setValueAtTime(0.3, noteStart);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, noteStart + 0.3);
+            gainNode.gain.setValueAtTime(0, currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.28, currentTime + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, currentTime + note.dur);
 
-            osc.start(noteStart);
-            osc.stop(noteStart + 0.3);
+            osc.start(currentTime);
+            osc.stop(currentTime + note.dur);
+
+            // Add harmony (third above)
+            const harmony = this.audioContext.createOscillator();
+            const harmonyGain = this.audioContext.createGain();
+
+            harmony.connect(harmonyGain);
+            harmonyGain.connect(this.sfxGainNode);
+
+            harmony.frequency.value = note.freq * 1.25; // Major third
+            harmony.type = 'triangle';
+
+            harmonyGain.gain.setValueAtTime(0, currentTime);
+            harmonyGain.gain.linearRampToValueAtTime(0.15, currentTime + 0.01);
+            harmonyGain.gain.exponentialRampToValueAtTime(0.01, currentTime + note.dur);
+
+            harmony.start(currentTime);
+            harmony.stop(currentTime + note.dur);
+
+            currentTime += note.dur;
         });
+
+        // Add sparkles throughout
+        for (let i = 0; i < 8; i++) {
+            const sparkle = this.audioContext.createOscillator();
+            const sparkleGain = this.audioContext.createGain();
+
+            sparkle.connect(sparkleGain);
+            sparkleGain.connect(this.sfxGainNode);
+
+            const sparkleTime = now + (i * 0.1);
+            sparkle.frequency.value = 2000 + (Math.random() * 1000);
+            sparkle.type = 'sine';
+
+            sparkleGain.gain.setValueAtTime(0.08, sparkleTime);
+            sparkleGain.gain.exponentialRampToValueAtTime(0.01, sparkleTime + 0.2);
+
+            sparkle.start(sparkleTime);
+            sparkle.stop(sparkleTime + 0.2);
+        }
     }
 }
 
