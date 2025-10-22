@@ -308,6 +308,8 @@ class VibeMatcherGame {
             this.deselectPiece();
             this.updateUI();
             this.isProcessing = false;
+            // Check level status after special item explosion completes
+            this.checkLevelStatus();
             return;
         } else if (this.isSpecialItem(val2)) {
             // Special item at position 2 - trigger explosion
@@ -317,6 +319,8 @@ class VibeMatcherGame {
             this.deselectPiece();
             this.updateUI();
             this.isProcessing = false;
+            // Check level status after special item explosion completes
+            this.checkLevelStatus();
             return;
         }
 
@@ -337,19 +341,28 @@ class VibeMatcherGame {
         // Check for matches and process them
         await this.processMatches();
 
-        // Check for level complete (score target reached) or game over
-        this.checkLevelStatus();
-
+        // Move is complete - set processing to false BEFORE checking status
+        // This ensures the game state is fully settled
         this.isProcessing = false;
+
+        // Check for level complete (score target reached) or game over
+        // Called AFTER isProcessing is false so game state is settled
+        this.checkLevelStatus();
     }
 
     checkLevelStatus() {
+        // Don't check if already processing (prevents duplicate checks)
+        if (this.isProcessing) return;
+
+        const overlay = document.getElementById('message-overlay');
+        const isOverlayShowing = overlay && overlay.classList.contains('show');
+
         // Check if level is complete (target score reached)
-        if (this.score >= this.targetScore && !document.getElementById('message-overlay').classList.contains('show')) {
+        if (this.score >= this.targetScore && !isOverlayShowing) {
             this.showMessage('Level Complete!', `Amazing! You scored ${this.score} points! Ready for the next level?`, 'Next Level');
         }
         // Check for game over (out of moves but didn't reach target)
-        else if (this.moves <= 0 && this.score < this.targetScore) {
+        else if (this.moves <= 0 && this.score < this.targetScore && !isOverlayShowing) {
             this.showMessage('Game Over!', `You scored ${this.score} points. Try again?`, 'Restart');
         }
     }
@@ -412,8 +425,7 @@ class VibeMatcherGame {
         // Check for cascading matches
         await this.processMatches();
 
-        // Check if level complete after explosion
-        this.checkLevelStatus();
+        // Level status will be checked by the caller after isProcessing is set to false
     }
 
     findMatches() {
@@ -507,8 +519,7 @@ class VibeMatcherGame {
             matches = this.findMatches();
         }
 
-        // Check for level complete after all cascades
-        this.checkLevelStatus();
+        // Level status will be checked by the caller after isProcessing is set to false
     }
 
     screenShake(matchCount = 3) {
