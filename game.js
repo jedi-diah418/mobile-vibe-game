@@ -23,7 +23,7 @@ class AudioManager {
             // Create gain nodes for volume control
             this.musicGainNode = this.audioContext.createGain();
             this.musicGainNode.connect(this.audioContext.destination);
-            this.musicGainNode.gain.value = 0.3; // Background music at 30% volume
+            this.musicGainNode.gain.value = 0.18; // Background music at 18% volume (ambient lo-fi)
 
             this.sfxGainNode = this.audioContext.createGain();
             this.sfxGainNode.connect(this.audioContext.destination);
@@ -78,64 +78,83 @@ class AudioManager {
         // Check if this loop was cancelled
         if (this.isMuted || !this.audioContext || loopId !== this.musicLoopId) return;
 
-        // Whimsical bouncy melody - like a music box or carousel
-        const melody = [
-            { freq: 523.25, dur: 0.15 }, // C5
-            { freq: 659.25, dur: 0.15 }, // E5
-            { freq: 783.99, dur: 0.15 }, // G5
-            { freq: 1046.50, dur: 0.2 }, // C6 (hold)
-            { freq: 987.77, dur: 0.15 }, // B5
-            { freq: 783.99, dur: 0.15 }, // G5
-            { freq: 659.25, dur: 0.15 }, // E5
-            { freq: 523.25, dur: 0.3 }, // C5 (hold)
+        // Lo-fi hip hop vibe - chill jazz chord progression
+        // Cmaj7 -> Am7 -> Fmaj7 -> G7
+        const chordProgression = [
+            { notes: [261.63, 329.63, 392.00, 493.88], dur: 1.2, bass: 130.81 }, // Cmaj7 (C-E-G-B)
+            { notes: [220.00, 261.63, 329.63, 392.00], dur: 1.2, bass: 110.00 }, // Am7 (A-C-E-G)
+            { notes: [174.61, 220.00, 261.63, 329.63], dur: 1.2, bass: 87.31 },  // Fmaj7 (F-A-C-E)
+            { notes: [196.00, 246.94, 293.66, 349.23], dur: 1.2, bass: 98.00 },  // G7 (G-B-D-F)
         ];
 
         let currentTime = startTime;
-        melody.forEach((note, i) => {
-            const osc = this.audioContext.createOscillator();
-            const gainNode = this.audioContext.createGain();
 
-            osc.connect(gainNode);
-            gainNode.connect(this.musicGainNode);
+        chordProgression.forEach((chord, chordIndex) => {
+            // Play bass note - low and sustained
+            const bass = this.audioContext.createOscillator();
+            const bassGain = this.audioContext.createGain();
 
-            osc.frequency.value = note.freq;
-            osc.type = 'square'; // Square wave for whimsical chiptune sound
+            bass.connect(bassGain);
+            bassGain.connect(this.musicGainNode);
 
-            gainNode.gain.setValueAtTime(0, currentTime);
-            gainNode.gain.linearRampToValueAtTime(0.12, currentTime + 0.01);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, currentTime + note.dur);
+            bass.frequency.value = chord.bass;
+            bass.type = 'sine';
 
-            osc.start(currentTime);
-            osc.stop(currentTime + note.dur);
+            bassGain.gain.setValueAtTime(0.08, currentTime);
+            bassGain.gain.setValueAtTime(0.08, currentTime + chord.dur - 0.1);
+            bassGain.gain.exponentialRampToValueAtTime(0.01, currentTime + chord.dur);
 
-            currentTime += note.dur;
-        });
+            bass.start(currentTime);
+            bass.stop(currentTime + chord.dur);
 
-        // Add a harmony layer for richness
-        currentTime = startTime;
-        melody.forEach((note, i) => {
-            const osc = this.audioContext.createOscillator();
-            const gainNode = this.audioContext.createGain();
+            // Play chord notes as soft, sustained tones (not arpeggio)
+            chord.notes.forEach((freq, noteIndex) => {
+                const osc = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
 
-            osc.connect(gainNode);
-            gainNode.connect(this.musicGainNode);
+                osc.connect(gainNode);
+                gainNode.connect(this.musicGainNode);
 
-            // Play a fifth above for harmony
-            osc.frequency.value = note.freq * 1.5;
-            osc.type = 'triangle';
+                osc.frequency.value = freq;
+                osc.type = 'sine'; // Smooth sine wave for mellow sound
 
-            gainNode.gain.setValueAtTime(0, currentTime);
-            gainNode.gain.linearRampToValueAtTime(0.06, currentTime + 0.01);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, currentTime + note.dur);
+                // Soft attack and sustained
+                const noteVolume = 0.05 - (noteIndex * 0.005); // Higher notes softer
+                gainNode.gain.setValueAtTime(0, currentTime);
+                gainNode.gain.linearRampToValueAtTime(noteVolume, currentTime + 0.08);
+                gainNode.gain.setValueAtTime(noteVolume * 0.8, currentTime + chord.dur - 0.15);
+                gainNode.gain.linearRampToValueAtTime(0.001, currentTime + chord.dur);
 
-            osc.start(currentTime);
-            osc.stop(currentTime + note.dur);
+                osc.start(currentTime);
+                osc.stop(currentTime + chord.dur);
+            });
 
-            currentTime += note.dur;
+            // Add a subtle melody note on top (jazzy)
+            if (chordIndex % 2 === 0) {
+                const melodyNote = this.audioContext.createOscillator();
+                const melodyGain = this.audioContext.createGain();
+
+                melodyNote.connect(melodyGain);
+                melodyGain.connect(this.musicGainNode);
+
+                // Play the 7th or 9th of the chord for that jazzy flavor
+                const melodyFreq = chord.notes[chord.notes.length - 1] * 1.5;
+                melodyNote.frequency.value = melodyFreq;
+                melodyNote.type = 'triangle';
+
+                melodyGain.gain.setValueAtTime(0, currentTime + 0.3);
+                melodyGain.gain.linearRampToValueAtTime(0.04, currentTime + 0.35);
+                melodyGain.gain.exponentialRampToValueAtTime(0.001, currentTime + 0.8);
+
+                melodyNote.start(currentTime + 0.3);
+                melodyNote.stop(currentTime + 0.8);
+            }
+
+            currentTime += chord.dur;
         });
 
         // Schedule next loop
-        const loopDuration = melody.reduce((sum, note) => sum + note.dur, 0);
+        const loopDuration = chordProgression.reduce((sum, chord) => sum + chord.dur, 0);
         this.musicLoopTimeout = setTimeout(() => {
             this.playBackgroundLoop(this.audioContext.currentTime, loopId);
         }, loopDuration * 1000);
