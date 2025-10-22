@@ -280,12 +280,12 @@ body {
 }
 
 .vibe-piece.falling {
-    animation: fall 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation: tetrisFall 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-@keyframes fall {
+@keyframes tetrisFall {
     from {
-        transform: translateY(-100%) rotate(-10deg);
+        transform: translateY(calc(-1 * var(--fall-distance))) rotate(-15deg);
         opacity: 0;
     }
     to {

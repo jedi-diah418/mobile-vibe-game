@@ -337,16 +337,21 @@ class VibeMatcherGame {
         // Check for matches and process them
         await this.processMatches();
 
-        // Check for game over or level complete
-        if (this.moves <= 0) {
-            if (this.score >= this.targetScore) {
-                this.showMessage('Level Complete!', 'Amazing vibes! Ready for the next level?', 'Next Level');
-            } else {
-                this.showMessage('Game Over!', `You scored ${this.score} points. Try again?`, 'Restart');
-            }
-        }
+        // Check for level complete (score target reached) or game over
+        this.checkLevelStatus();
 
         this.isProcessing = false;
+    }
+
+    checkLevelStatus() {
+        // Check if level is complete (target score reached)
+        if (this.score >= this.targetScore && !document.getElementById('message-overlay').classList.contains('show')) {
+            this.showMessage('Level Complete!', `Amazing! You scored ${this.score} points! Ready for the next level?`, 'Next Level');
+        }
+        // Check for game over (out of moves but didn't reach target)
+        else if (this.moves <= 0 && this.score < this.targetScore) {
+            this.showMessage('Game Over!', `You scored ${this.score} points. Try again?`, 'Restart');
+        }
     }
 
     async triggerSpecialItem(row, col, itemType) {
@@ -406,6 +411,9 @@ class VibeMatcherGame {
 
         // Check for cascading matches
         await this.processMatches();
+
+        // Check if level complete after explosion
+        this.checkLevelStatus();
     }
 
     findMatches() {
@@ -490,14 +498,17 @@ class VibeMatcherGame {
             // Fill empty spaces
             this.fillBoard();
 
-            // Render with animation
-            this.render();
+            // Render with falling animation
+            this.renderWithFallingAnimation();
 
-            await this.sleep(350);
+            await this.sleep(450);
 
             // Check for new matches (cascading)
             matches = this.findMatches();
         }
+
+        // Check for level complete after all cascades
+        this.checkLevelStatus();
     }
 
     screenShake(matchCount = 3) {
@@ -620,6 +631,56 @@ class VibeMatcherGame {
 
                 piece.dataset.row = row;
                 piece.dataset.col = col;
+
+                boardElement.appendChild(piece);
+            }
+        }
+    }
+
+    renderWithFallingAnimation() {
+        const boardElement = document.getElementById('game-board');
+        const boardRect = boardElement.getBoundingClientRect();
+        const cellSize = boardRect.width / this.boardSize;
+
+        boardElement.innerHTML = '';
+
+        for (let row = 0; row < this.boardSize; row++) {
+            for (let col = 0; col < this.boardSize; col++) {
+                const vibeType = this.board[row][col];
+                const piece = document.createElement('div');
+
+                // Check if it's a special item
+                if (this.isSpecialItem(vibeType)) {
+                    piece.className = `vibe-piece special-item special-${vibeType}`;
+
+                    // Special item emojis
+                    if (vibeType === this.SPECIAL_ITEMS.DYNAMITE) {
+                        piece.textContent = '🧨';
+                    } else if (vibeType === this.SPECIAL_ITEMS.BOMB) {
+                        piece.textContent = '💣';
+                    } else if (vibeType === this.SPECIAL_ITEMS.NUCLEAR) {
+                        piece.textContent = '☢️';
+                    }
+                } else {
+                    piece.className = `vibe-piece vibe-${vibeType}`;
+
+                    // Add symbol based on vibe type - geometric shapes for better visibility
+                    const symbols = ['◆', '●', '■', '▲', '★', '◈', '⬢', '◉'];
+                    piece.textContent = symbols[vibeType];
+                }
+
+                piece.dataset.row = row;
+                piece.dataset.col = col;
+
+                // Calculate how far this piece needs to fall (from top of board)
+                const distanceToFall = (row + 1) * cellSize;
+                piece.style.setProperty('--fall-distance', `${distanceToFall}px`);
+
+                // Add staggered delay based on column
+                const delay = col * 0.03;
+                piece.style.animationDelay = `${delay}s`;
+
+                piece.classList.add('falling');
 
                 boardElement.appendChild(piece);
             }
