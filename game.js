@@ -687,9 +687,8 @@ class VibeMatcherGame {
                 const distanceToFall = (row + 1) * cellSize;
                 piece.style.setProperty('--fall-distance', `${distanceToFall}px`);
 
-                // Add staggered delay based on column
-                const delay = col * 0.03;
-                piece.style.animationDelay = `${delay}s`;
+                // No delay - all pieces fall simultaneously from top to bottom
+                piece.style.animationDelay = '0s';
 
                 piece.classList.add('falling');
 
