@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Matcher - Test Suite</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #0f0;
+        }
+        .test-pass { color: #0f0; }
+        .test-fail { color: #f00; }
+        .test-group { margin: 20px 0; border-left: 3px solid #444; padding-left: 15px; }
+        h2 { color: #0ff; }
+        #summary {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #000;
+            border: 2px solid #0ff;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .game-board-test {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Vibe Matcher Test Suite</h1>
+    <div id="summary"></div>
+    <div id="results"></div>
+
+    <!-- Hidden game board for testing -->
+    <div id="game-board" class="game-board-test"></div>
+
+    <script src="game.js"></script>
+    <script>
+        class TestRunner {
+            constructor() {
+                this.tests = [];
+                this.passed = 0;
+                this.failed = 0;
+            }
+
+            test(name, fn) {
+                this.tests.push({ name, fn });
+            }
+
+            async run() {
+                console.log('🧪 Running test suite...\n');
+
+                for (const test of this.tests) {
+                    try {
+                        await test.fn();
+                        this.pass(test.name);
+                    } catch (error) {
+                        this.fail(test.name, error);
+                    }
+                }
+
+                this.printSummary();
+            }
+
+            pass(name) {
+                this.passed++;
+                this.log(`✓ ${name}`, 'test-pass');
+                console.log(`✓ ${name}`);
+            }
+
+            fail(name, error) {
+                this.failed++;
+                this.log(`✗ ${name}: ${error.message}`, 'test-fail');
+                console.error(`✗ ${name}:`, error);
+            }
+
+            log(message, className) {
+                const div = document.createElement('div');
+                div.className = className;
+                div.textContent = message;
+                document.getElementById('results').appendChild(div);
+            }
+
+            printSummary() {
+                const total = this.passed + this.failed;
+                const summary = `
+                    <strong>Test Results</strong><br>
+                    Total: ${total}<br>
+                    <span class="test-pass">Passed: ${this.passed}</span><br>
+                    <span class="test-fail">Failed: ${this.failed}</span><br>
+                    <strong>${this.failed === 0 ? '✓ ALL PASS' : '✗ FAILURES'}</strong>
+                `;
+                document.getElementById('summary').innerHTML = summary;
+
+                console.log('\n' + '='.repeat(50));
+                console.log(`Total: ${total} | Passed: ${this.passed} | Failed: ${this.failed}`);
+                console.log(this.failed === 0 ? '✓ ALL TESTS PASSED' : '✗ SOME TESTS FAILED');
+                console.log('='.repeat(50));
+
+                // Exit with error code if tests failed (for CI/CD)
+                if (this.failed > 0 && typeof process !== 'undefined') {
+                    process.exit(1);
+                }
+            }
+        }
+
+        function assert(condition, message) {
+            if (!condition) {
+                throw new Error(message || 'Assertion failed');
+            }
+        }
+
+        function assertEquals(actual, expected, message) {
+            if (actual !== expected) {
+                throw new Error(message || `Expected ${expected}, got ${actual}`);
+            }
+        }
+
+        function assertArrayEquals(actual, expected, message) {
+            if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+                throw new Error(message || `Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+            }
+        }
+
+        // Initialize test runner
+        const runner = new TestRunner();
+
+        // ==================== BOARD INITIALIZATION TESTS ====================
+        runner.test('Board initializes with correct size', () => {
+            const game = new VibeMatcherGame();
+            assertEquals(game.boardSize, 7, 'Board size should be 7');
+            assertEquals(game.board.length, 7, 'Board should have 7 rows');
+            assertEquals(game.board[0].length, 7, 'Board should have 7 columns');
+        });
+
+        runner.test('Board has correct number of vibe types', () => {
+            const game = new VibeMatcherGame();
+            assertEquals(game.vibeTypes, 5, 'Should have 5 vibe types');
+        });
+
+        runner.test('Board initializes without matches', () => {
+            const game = new VibeMatcherGame();
+            const matches = game.findMatches();
+            assertEquals(matches.length, 0, 'Initial board should have no matches');
+        });
+
+        runner.test('Board cells contain valid values', () => {
+            const game = new VibeMatcherGame();
+            for (let row = 0; row < game.boardSize; row++) {
+                for (let col = 0; col < game.boardSize; col++) {
+                    const value = game.board[row][col];
+                    assert(
+                        (value >= 0 && value < game.vibeTypes) || value >= 100,
+                        `Cell [${row},${col}] has invalid value: ${value}`
+                    );
+                }
+            }
+        });
+
+        // ==================== MATCH DETECTION TESTS ====================
+        runner.test('Detects horizontal match of 3', () => {
+            const game = new VibeMatcherGame();
+            // Set up a horizontal match
+            game.board[0][0] = 0;
+            game.board[0][1] = 0;
+            game.board[0][2] = 0;
+
+            const matches = game.findMatches();
+            assert(matches.length >= 3, 'Should detect at least 3 matched pieces');
+        });
+
+        runner.test('Detects vertical match of 3', () => {
+            const game = new VibeMatcherGame();
+            // Clear board first
+            for (let r = 0; r < 7; r++) {
+                for (let c = 0; c < 7; c++) {
+                    game.board[r][c] = (r + c) % 5; // No matches
+                }
+            }
+            // Set up a vertical match
+            game.board[0][0] = 1;
+            game.board[1][0] = 1;
+            game.board[2][0] = 1;
+
+            const matches = game.findMatches();
+            assert(matches.length >= 3, 'Should detect at least 3 matched pieces');
+        });
+
+        runner.test('Does not match special items', () => {
+            const game = new VibeMatcherGame();
+            // Set up special items in a row
+            game.board[0][0] = 100; // Dynamite
+            game.board[0][1] = 100;
+            game.board[0][2] = 100;
+
+            const matches = game.findMatches();
+            const hasSpecialMatch = matches.some(([r, c]) =>
+                r === 0 && (c === 0 || c === 1 || c === 2)
+            );
+            assert(!hasSpecialMatch, 'Should not match special items');
+        });
+
+        runner.test('Detects match of 4', () => {
+            const game = new VibeMatcherGame();
+            for (let r = 0; r < 7; r++) {
+                for (let c = 0; c < 7; c++) {
+                    game.board[r][c] = (r + c) % 5;
+                }
+            }
+            game.board[3][0] = 2;
+            game.board[3][1] = 2;
+            game.board[3][2] = 2;
+            game.board[3][3] = 2;
+
+            const matches = game.findMatches();
+            assert(matches.length >= 4, 'Should detect match of 4');
+        });
+
+        runner.test('Detects match of 5', () => {
+            const game = new VibeMatcherGame();
+            for (let r = 0; r < 7; r++) {
+                for (let c = 0; c < 7; c++) {
+                    game.board[r][c] = (r + c) % 5;
+                }
+            }
+            game.board[3][0] = 2;
+            game.board[3][1] = 2;
+            game.board[3][2] = 2;
+            game.board[3][3] = 2;
+            game.board[3][4] = 2;
+
+            const matches = game.findMatches();
+            assert(matches.length >= 5, 'Should detect match of 5');
+        });
+
+        // ==================== GRAVITY TESTS ====================
+        runner.test('Gravity makes pieces fall down', () => {
+            const game = new VibeMatcherGame();
+            game.board[0][0] = 1;
+            game.board[1][0] = null;
+            game.board[2][0] = null;
+            game.board[3][0] = 2;
+
+            game.applyGravity();
+
+            assertEquals(game.board[3][0], 2, 'Bottom piece should stay');
+            assertEquals(game.board[2][0], 1, 'Top piece should fall to position 2');
+            assertEquals(game.board[1][0], null, 'Position 1 should be null');
+            assertEquals(game.board[0][0], null, 'Position 0 should be null');
+        });
+
+        runner.test('Gravity works in all columns', () => {
+            const game = new VibeMatcherGame();
+            for (let col = 0; col < 7; col++) {
+                game.board[0][col] = col;
+                game.board[1][col] = null;
+                game.board[2][col] = null;
+            }
+
+            game.applyGravity();
+
+            for (let col = 0; col < 7; col++) {
+                assertEquals(game.board[2][col], col, `Column ${col} piece should fall`);
+                assertEquals(game.board[1][col], null, `Column ${col} position 1 should be null`);
+                assertEquals(game.board[0][col], null, `Column ${col} position 0 should be null`);
+            }
+        });
+
+        // ==================== SPECIAL ITEMS TESTS ====================
+        runner.test('isSpecialItem recognizes special items', () => {
+            const game = new VibeMatcherGame();
+            assert(game.isSpecialItem(100), 'Should recognize dynamite');
+            assert(game.isSpecialItem(101), 'Should recognize bomb');
+            assert(game.isSpecialItem(102), 'Should recognize nuclear');
+            assert(!game.isSpecialItem(0), 'Should not recognize normal piece 0');
+            assert(!game.isSpecialItem(4), 'Should not recognize normal piece 4');
+        });
+
+        runner.test('wouldCreateMatch ignores special items', () => {
+            const game = new VibeMatcherGame();
+            game.board[0][0] = 100; // Dynamite
+            game.board[0][1] = 100;
+            game.board[0][2] = 1;
+
+            const result = game.wouldCreateMatch(0, 2, 100);
+            assert(!result, 'Should not create match with special items');
+        });
+
+        // ==================== SCORE TESTS ====================
+        runner.test('Initial score is 0', () => {
+            const game = new VibeMatcherGame();
+            assertEquals(game.score, 0, 'Initial score should be 0');
+        });
+
+        runner.test('Initial moves is 30', () => {
+            const game = new VibeMatcherGame();
+            assertEquals(game.moves, 30, 'Initial moves should be 30');
+        });
+
+        runner.test('Initial level is 1', () => {
+            const game = new VibeMatcherGame();
+            assertEquals(game.level, 1, 'Initial level should be 1');
+        });
+
+        runner.test('Target score starts at 1000', () => {
+            const game = new VibeMatcherGame();
+            assertEquals(game.targetScore, 1000, 'Initial target should be 1000');
+        });
+
+        // ==================== SWAP VALIDATION TESTS ====================
+        runner.test('areAdjacent detects horizontal neighbors', () => {
+            const game = new VibeMatcherGame();
+            assert(game.areAdjacent(0, 0, 0, 1), 'Should detect right neighbor');
+            assert(game.areAdjacent(0, 1, 0, 0), 'Should detect left neighbor');
+        });
+
+        runner.test('areAdjacent detects vertical neighbors', () => {
+            const game = new VibeMatcherGame();
+            assert(game.areAdjacent(0, 0, 1, 0), 'Should detect bottom neighbor');
+            assert(game.areAdjacent(1, 0, 0, 0), 'Should detect top neighbor');
+        });
+
+        runner.test('areAdjacent rejects diagonal', () => {
+            const game = new VibeMatcherGame();
+            assert(!game.areAdjacent(0, 0, 1, 1), 'Should reject diagonal');
+        });
+
+        runner.test('areAdjacent rejects distant pieces', () => {
+            const game = new VibeMatcherGame();
+            assert(!game.areAdjacent(0, 0, 0, 3), 'Should reject distant pieces');
+        });
+
+        // ==================== SEEDED RANDOM TESTS ====================
+        runner.test('Seeded random generates consistent values', () => {
+            const game1 = new VibeMatcherGame();
+            const game2 = new VibeMatcherGame();
+
+            // Both should generate the same board with same seed
+            for (let r = 0; r < 7; r++) {
+                for (let c = 0; c < 7; c++) {
+                    assertEquals(
+                        game1.board[r][c],
+                        game2.board[r][c],
+                        `Board[${r}][${c}] should be same with same seed`
+                    );
+                }
+            }
+        });
+
+        // ==================== FILL BOARD TESTS ====================
+        runner.test('fillBoard fills empty cells', () => {
+            const game = new VibeMatcherGame();
+            game.board[0][0] = null;
+            game.board[1][1] = null;
+            game.board[2][2] = null;
+
+            game.fillBoard();
+
+            assert(game.board[0][0] !== null, 'Cell [0,0] should be filled');
+            assert(game.board[1][1] !== null, 'Cell [1,1] should be filled');
+            assert(game.board[2][2] !== null, 'Cell [2,2] should be filled');
+        });
+
+        runner.test('fillBoard only fills null cells', () => {
+            const game = new VibeMatcherGame();
+            const original00 = game.board[0][0];
+            const original11 = game.board[1][1];
+            game.board[2][2] = null;
+
+            game.fillBoard();
+
+            assertEquals(game.board[0][0], original00, 'Non-null cells should not change');
+            assertEquals(game.board[1][1], original11, 'Non-null cells should not change');
+            assert(game.board[2][2] !== null, 'Null cell should be filled');
+        });
+
+        // Run all tests
+        runner.run();
+    </script>
+</body>
+</html>

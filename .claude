@@ -152,11 +152,21 @@ seededRandom(seed) {
 
 ## Development Workflow
 
+**🚨 TESTING REQUIREMENT (v1.3.1+)**
+
+ALL changes MUST pass tests before committing:
+
 1. Make changes locally
-2. Git add/commit with descriptive messages
-3. Push to claude/github-game-prototype-011CUMBnvwesYGchJP9JLQBX branch
-4. GitHub Actions auto-deploys to Pages
-5. Test on mobile Safari
+2. **RUN TESTS**: `./run-tests.sh`
+3. **VERIFY**: Open `test.html` in browser - ALL tests must be ✓ green
+4. Git add/commit with descriptive messages
+5. Push to appropriate claude/** branch
+6. GitHub Actions auto-deploys to Pages
+7. Test on mobile Safari
+
+**DO NOT COMMIT IF ANY TEST FAILS**
+
+See TESTING.md for details.
 
 ## Important Notes
 

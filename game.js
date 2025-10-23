@@ -605,29 +605,23 @@ class VibeMatcherGame {
         this.score += points;
         this.updateUI();
 
-        // Remove all destroyed pieces
+        // Remove all destroyed pieces from board and DOM
         toDestroy.forEach(([r, c]) => {
+            const piece = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+            if (piece) {
+                piece.remove();
+            }
             this.board[r][c] = null;
         });
 
         // Apply gravity
         this.applyGravity();
 
-        // Find which cells are still empty after gravity (these need new pieces)
-        const newPiecePositions = new Set();
-        for (let row = 0; row < this.boardSize; row++) {
-            for (let col = 0; col < this.boardSize; col++) {
-                if (this.board[row][col] === null) {
-                    newPiecePositions.add(`${row},${col}`);
-                }
-            }
-        }
-
         // Fill empty spaces
         this.fillBoard();
 
-        // Re-render the entire board with falling animation only for new pieces
-        this.renderBoardWithNewPieces(newPiecePositions);
+        // Render with falling animation
+        this.renderWithFallingAnimation();
 
         await this.sleep(400);
 
@@ -717,39 +711,23 @@ class VibeMatcherGame {
             this.score += matchScore;
             this.updateUI();
 
-            // Remove matched pieces
+            // Remove matched pieces from board and DOM
             matches.forEach(([row, col]) => {
+                const piece = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                if (piece) {
+                    piece.remove();
+                }
                 this.board[row][col] = null;
             });
-
-            // Track which cells were empty before filling
-            const emptyBefore = new Set();
-            for (let row = 0; row < this.boardSize; row++) {
-                for (let col = 0; col < this.boardSize; col++) {
-                    if (this.board[row][col] === null) {
-                        emptyBefore.add(`${row},${col}`);
-                    }
-                }
-            }
 
             // Apply gravity
             this.applyGravity();
 
-            // Find which cells are still empty after gravity (these need new pieces)
-            const newPiecePositions = new Set();
-            for (let row = 0; row < this.boardSize; row++) {
-                for (let col = 0; col < this.boardSize; col++) {
-                    if (this.board[row][col] === null) {
-                        newPiecePositions.add(`${row},${col}`);
-                    }
-                }
-            }
-
             // Fill empty spaces
             this.fillBoard();
 
-            // Re-render the entire board with falling animation only for new pieces
-            this.renderBoardWithNewPieces(newPiecePositions);
+            // Render with falling animation
+            this.renderWithFallingAnimation();
 
             await this.sleep(450);
 
@@ -785,56 +763,6 @@ class VibeMatcherGame {
             // Simple heart emoji for easy recognition
             const symbols = ['❤️', '💙', '💛', '💚', '💜'];
             piece.textContent = symbols[vibeType];
-        }
-    }
-
-    renderBoardWithNewPieces(newPiecePositions) {
-        const boardElement = document.getElementById('game-board');
-        const boardRect = boardElement.getBoundingClientRect();
-        const cellSize = boardRect.width / this.boardSize;
-
-        // Clear the board
-        boardElement.innerHTML = '';
-
-        // Render all pieces
-        for (let row = 0; row < this.boardSize; row++) {
-            for (let col = 0; col < this.boardSize; col++) {
-                const vibeType = this.board[row][col];
-                const piece = document.createElement('div');
-
-                // Check if it's a special item
-                if (this.isSpecialItem(vibeType)) {
-                    piece.className = `vibe-piece special-item special-${vibeType}`;
-
-                    // Special item emojis
-                    if (vibeType === this.SPECIAL_ITEMS.DYNAMITE) {
-                        piece.textContent = '🧨';
-                    } else if (vibeType === this.SPECIAL_ITEMS.BOMB) {
-                        piece.textContent = '💣';
-                    } else if (vibeType === this.SPECIAL_ITEMS.NUCLEAR) {
-                        piece.textContent = '☢️';
-                    }
-                } else {
-                    piece.className = `vibe-piece vibe-${vibeType}`;
-
-                    // Simple heart emoji for easy recognition
-                    const symbols = ['❤️', '💙', '💛', '💚', '💜'];
-                    piece.textContent = symbols[vibeType];
-                }
-
-                piece.dataset.row = row;
-                piece.dataset.col = col;
-
-                // Only add falling animation to NEW pieces
-                const posKey = `${row},${col}`;
-                if (newPiecePositions.has(posKey)) {
-                    const distanceToFall = (row + 1) * cellSize;
-                    piece.style.setProperty('--fall-distance', `${distanceToFall}px`);
-                    piece.classList.add('falling');
-                }
-
-                boardElement.appendChild(piece);
-            }
         }
     }
 
