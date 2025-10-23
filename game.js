@@ -258,17 +258,30 @@ class VibeMatcherGame {
     }
 
     wouldCreateMatch(row, col, vibeType) {
+        // Don't check matches for special items
+        if (this.isSpecialItem(vibeType)) {
+            return false;
+        }
+
         // Check horizontal match
-        if (col >= 2 &&
-            this.board[row][col - 1] === vibeType &&
-            this.board[row][col - 2] === vibeType) {
-            return true;
+        if (col >= 2) {
+            const left1 = this.board[row][col - 1];
+            const left2 = this.board[row][col - 2];
+            // Make sure we're not comparing with special items
+            if (!this.isSpecialItem(left1) && !this.isSpecialItem(left2) &&
+                left1 === vibeType && left2 === vibeType) {
+                return true;
+            }
         }
         // Check vertical match
-        if (row >= 2 &&
-            this.board[row - 1][col] === vibeType &&
-            this.board[row - 2][col] === vibeType) {
-            return true;
+        if (row >= 2) {
+            const up1 = this.board[row - 1][col];
+            const up2 = this.board[row - 2][col];
+            // Make sure we're not comparing with special items
+            if (!this.isSpecialItem(up1) && !this.isSpecialItem(up2) &&
+                up1 === vibeType && up2 === vibeType) {
+                return true;
+            }
         }
         return false;
     }
@@ -592,55 +605,29 @@ class VibeMatcherGame {
         this.score += points;
         this.updateUI();
 
-        // Remove all destroyed pieces from DOM
+        // Remove all destroyed pieces
         toDestroy.forEach(([r, c]) => {
-            const piece = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
-            if (piece) {
-                piece.remove();
-            }
             this.board[r][c] = null;
         });
-
-        // Mark board state before gravity
-        const boardBeforeGravity = JSON.parse(JSON.stringify(this.board));
 
         // Apply gravity
         this.applyGravity();
 
-        // Fill empty spaces and track which are new
-        const newPieces = [];
+        // Find which cells are still empty after gravity (these need new pieces)
+        const newPiecePositions = new Set();
         for (let row = 0; row < this.boardSize; row++) {
             for (let col = 0; col < this.boardSize; col++) {
                 if (this.board[row][col] === null) {
-                    // Chance to spawn special item
-                    const specialItem = this.maybeSpawnSpecialItem(false);
-                    if (specialItem !== null) {
-                        this.board[row][col] = specialItem;
-                    } else {
-                        this.board[row][col] = Math.floor(this.rng() * this.vibeTypes);
-                    }
-                    newPieces.push([row, col]);
+                    newPiecePositions.add(`${row},${col}`);
                 }
             }
         }
 
-        // Update existing pieces positions (they fell down due to gravity)
-        const boardElement = document.getElementById('game-board');
-        for (let col = 0; col < this.boardSize; col++) {
-            for (let row = this.boardSize - 1; row >= 0; row--) {
-                // Find piece in old position and update to new position
-                const oldRow = this.findOldRowForPiece(boardBeforeGravity, row, col, this.board[row][col]);
-                if (oldRow !== null && oldRow !== row) {
-                    const piece = document.querySelector(`[data-row="${oldRow}"][data-col="${col}"]`);
-                    if (piece && !newPieces.some(([r, c]) => r === row && c === col)) {
-                        piece.dataset.row = row;
-                    }
-                }
-            }
-        }
+        // Fill empty spaces
+        this.fillBoard();
 
-        // Add only NEW pieces with falling animation
-        this.renderNewPieces(newPieces);
+        // Re-render the entire board with falling animation only for new pieces
+        this.renderBoardWithNewPieces(newPiecePositions);
 
         await this.sleep(400);
 
@@ -658,6 +645,9 @@ class VibeMatcherGame {
         for (let row = 0; row < this.boardSize; row++) {
             for (let col = 0; col < this.boardSize - 2; col++) {
                 const vibeType = this.board[row][col];
+                // Don't match special items or null values
+                if (vibeType === null || this.isSpecialItem(vibeType)) continue;
+
                 if (this.board[row][col + 1] === vibeType &&
                     this.board[row][col + 2] === vibeType) {
                     let endCol = col + 2;
@@ -675,6 +665,9 @@ class VibeMatcherGame {
         for (let col = 0; col < this.boardSize; col++) {
             for (let row = 0; row < this.boardSize - 2; row++) {
                 const vibeType = this.board[row][col];
+                // Don't match special items or null values
+                if (vibeType === null || this.isSpecialItem(vibeType)) continue;
+
                 if (this.board[row + 1][col] === vibeType &&
                     this.board[row + 2][col] === vibeType) {
                     let endRow = row + 2;
@@ -724,55 +717,39 @@ class VibeMatcherGame {
             this.score += matchScore;
             this.updateUI();
 
-            // Remove matched pieces from DOM
+            // Remove matched pieces
             matches.forEach(([row, col]) => {
-                const piece = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-                if (piece) {
-                    piece.remove();
-                }
                 this.board[row][col] = null;
             });
 
-            // Mark board state before gravity
-            const boardBeforeGravity = JSON.parse(JSON.stringify(this.board));
+            // Track which cells were empty before filling
+            const emptyBefore = new Set();
+            for (let row = 0; row < this.boardSize; row++) {
+                for (let col = 0; col < this.boardSize; col++) {
+                    if (this.board[row][col] === null) {
+                        emptyBefore.add(`${row},${col}`);
+                    }
+                }
+            }
 
             // Apply gravity
             this.applyGravity();
 
-            // Fill empty spaces and track which are new
-            const newPieces = [];
+            // Find which cells are still empty after gravity (these need new pieces)
+            const newPiecePositions = new Set();
             for (let row = 0; row < this.boardSize; row++) {
                 for (let col = 0; col < this.boardSize; col++) {
                     if (this.board[row][col] === null) {
-                        // Chance to spawn special item
-                        const specialItem = this.maybeSpawnSpecialItem(false);
-                        if (specialItem !== null) {
-                            this.board[row][col] = specialItem;
-                        } else {
-                            this.board[row][col] = Math.floor(this.rng() * this.vibeTypes);
-                        }
-                        newPieces.push([row, col]);
+                        newPiecePositions.add(`${row},${col}`);
                     }
                 }
             }
 
-            // Update existing pieces positions (they fell down due to gravity)
-            const boardElement = document.getElementById('game-board');
-            for (let col = 0; col < this.boardSize; col++) {
-                for (let row = this.boardSize - 1; row >= 0; row--) {
-                    // Find piece in old position and update to new position
-                    const oldRow = this.findOldRowForPiece(boardBeforeGravity, row, col, this.board[row][col]);
-                    if (oldRow !== null && oldRow !== row) {
-                        const piece = document.querySelector(`[data-row="${oldRow}"][data-col="${col}"]`);
-                        if (piece && !newPieces.some(([r, c]) => r === row && c === col)) {
-                            piece.dataset.row = row;
-                        }
-                    }
-                }
-            }
+            // Fill empty spaces
+            this.fillBoard();
 
-            // Add only NEW pieces with falling animation
-            this.renderNewPieces(newPieces);
+            // Re-render the entire board with falling animation only for new pieces
+            this.renderBoardWithNewPieces(newPiecePositions);
 
             await this.sleep(450);
 
@@ -811,57 +788,54 @@ class VibeMatcherGame {
         }
     }
 
-    findOldRowForPiece(oldBoard, newRow, col, value) {
-        // Find where this piece was before gravity
-        for (let r = newRow; r >= 0; r--) {
-            if (oldBoard[r][col] === value) {
-                return r;
-            }
-        }
-        return null;
-    }
-
-    renderNewPieces(newPieces) {
+    renderBoardWithNewPieces(newPiecePositions) {
         const boardElement = document.getElementById('game-board');
         const boardRect = boardElement.getBoundingClientRect();
         const cellSize = boardRect.width / this.boardSize;
 
-        newPieces.forEach(([row, col]) => {
-            const vibeType = this.board[row][col];
-            const piece = document.createElement('div');
+        // Clear the board
+        boardElement.innerHTML = '';
 
-            // Check if it's a special item
-            if (this.isSpecialItem(vibeType)) {
-                piece.className = `vibe-piece special-item special-${vibeType}`;
+        // Render all pieces
+        for (let row = 0; row < this.boardSize; row++) {
+            for (let col = 0; col < this.boardSize; col++) {
+                const vibeType = this.board[row][col];
+                const piece = document.createElement('div');
 
-                // Special item emojis
-                if (vibeType === this.SPECIAL_ITEMS.DYNAMITE) {
-                    piece.textContent = '🧨';
-                } else if (vibeType === this.SPECIAL_ITEMS.BOMB) {
-                    piece.textContent = '💣';
-                } else if (vibeType === this.SPECIAL_ITEMS.NUCLEAR) {
-                    piece.textContent = '☢️';
+                // Check if it's a special item
+                if (this.isSpecialItem(vibeType)) {
+                    piece.className = `vibe-piece special-item special-${vibeType}`;
+
+                    // Special item emojis
+                    if (vibeType === this.SPECIAL_ITEMS.DYNAMITE) {
+                        piece.textContent = '🧨';
+                    } else if (vibeType === this.SPECIAL_ITEMS.BOMB) {
+                        piece.textContent = '💣';
+                    } else if (vibeType === this.SPECIAL_ITEMS.NUCLEAR) {
+                        piece.textContent = '☢️';
+                    }
+                } else {
+                    piece.className = `vibe-piece vibe-${vibeType}`;
+
+                    // Simple heart emoji for easy recognition
+                    const symbols = ['❤️', '💙', '💛', '💚', '💜'];
+                    piece.textContent = symbols[vibeType];
                 }
-            } else {
-                piece.className = `vibe-piece vibe-${vibeType}`;
 
-                // Simple heart emoji for easy recognition
-                const symbols = ['❤️', '💙', '💛', '💚', '💜'];
-                piece.textContent = symbols[vibeType];
+                piece.dataset.row = row;
+                piece.dataset.col = col;
+
+                // Only add falling animation to NEW pieces
+                const posKey = `${row},${col}`;
+                if (newPiecePositions.has(posKey)) {
+                    const distanceToFall = (row + 1) * cellSize;
+                    piece.style.setProperty('--fall-distance', `${distanceToFall}px`);
+                    piece.classList.add('falling');
+                }
+
+                boardElement.appendChild(piece);
             }
-
-            piece.dataset.row = row;
-            piece.dataset.col = col;
-
-            // Calculate how far this piece needs to fall (from top of board)
-            const distanceToFall = (row + 1) * cellSize;
-            piece.style.setProperty('--fall-distance', `${distanceToFall}px`);
-
-            // Add falling animation
-            piece.classList.add('falling');
-
-            boardElement.appendChild(piece);
-        });
+        }
     }
 
     screenShake(matchCount = 3) {
