@@ -127,7 +127,17 @@ class SoundManager {
     toggleMusic() {
         this.musicEnabled = !this.musicEnabled;
         if (this.musicEnabled) {
-            this.startBackgroundMusic();
+            // Ensure audio context is created and resumed
+            if (!this.audioContext) {
+                this.initAudio();
+            }
+            if (this.audioContext.state === 'suspended') {
+                this.audioContext.resume().then(() => {
+                    this.startBackgroundMusic();
+                });
+            } else {
+                this.startBackgroundMusic();
+            }
         } else {
             this.stopBackgroundMusic();
         }
@@ -172,15 +182,18 @@ class VibeMatcherGame {
         this.render();
         this.updateUI();
 
-        // Initialize audio on first user interaction
-        document.addEventListener('click', () => {
+        // Start music on first user interaction (required by browsers)
+        const startAudio = () => {
             if (this.sound.audioContext && this.sound.audioContext.state === 'suspended') {
                 this.sound.audioContext.resume();
             }
-            if (this.sound.musicEnabled) {
+            if (this.sound.musicEnabled && this.sound.musicOscillators.length === 0) {
                 this.sound.startBackgroundMusic();
             }
-        }, { once: true });
+        };
+
+        document.addEventListener('click', startAudio, { once: true });
+        document.addEventListener('touchstart', startAudio, { once: true });
     }
 
     // Seeded random number generator for deterministic levels
@@ -469,7 +482,6 @@ class VibeMatcherGame {
             // Special item at position 1 - trigger explosion
             await this.triggerSpecialItem(row1, col1, val1);
             this.moves--;
-            this.render();
             this.deselectPiece();
             this.updateUI();
             this.isProcessing = false;
@@ -480,7 +492,6 @@ class VibeMatcherGame {
             // Special item at position 2 - trigger explosion
             await this.triggerSpecialItem(row2, col2, val2);
             this.moves--;
-            this.render();
             this.deselectPiece();
             this.updateUI();
             this.isProcessing = false;
@@ -496,8 +507,9 @@ class VibeMatcherGame {
         // Deduct move immediately
         this.moves--;
 
-        // Render the swap
-        this.render();
+        // Update the swapped pieces visually
+        this.updatePieceVisual(row1, col1);
+        this.updatePieceVisual(row2, col2);
         this.deselectPiece();
         this.updateUI();
 
@@ -580,15 +592,55 @@ class VibeMatcherGame {
         this.score += points;
         this.updateUI();
 
-        // Remove all destroyed pieces
+        // Remove all destroyed pieces from DOM
         toDestroy.forEach(([r, c]) => {
+            const piece = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+            if (piece) {
+                piece.remove();
+            }
             this.board[r][c] = null;
         });
 
-        // Apply gravity and fill
+        // Mark board state before gravity
+        const boardBeforeGravity = JSON.parse(JSON.stringify(this.board));
+
+        // Apply gravity
         this.applyGravity();
-        this.fillBoard();
-        this.render();
+
+        // Fill empty spaces and track which are new
+        const newPieces = [];
+        for (let row = 0; row < this.boardSize; row++) {
+            for (let col = 0; col < this.boardSize; col++) {
+                if (this.board[row][col] === null) {
+                    // Chance to spawn special item
+                    const specialItem = this.maybeSpawnSpecialItem(false);
+                    if (specialItem !== null) {
+                        this.board[row][col] = specialItem;
+                    } else {
+                        this.board[row][col] = Math.floor(this.rng() * this.vibeTypes);
+                    }
+                    newPieces.push([row, col]);
+                }
+            }
+        }
+
+        // Update existing pieces positions (they fell down due to gravity)
+        const boardElement = document.getElementById('game-board');
+        for (let col = 0; col < this.boardSize; col++) {
+            for (let row = this.boardSize - 1; row >= 0; row--) {
+                // Find piece in old position and update to new position
+                const oldRow = this.findOldRowForPiece(boardBeforeGravity, row, col, this.board[row][col]);
+                if (oldRow !== null && oldRow !== row) {
+                    const piece = document.querySelector(`[data-row="${oldRow}"][data-col="${col}"]`);
+                    if (piece && !newPieces.some(([r, c]) => r === row && c === col)) {
+                        piece.dataset.row = row;
+                    }
+                }
+            }
+        }
+
+        // Add only NEW pieces with falling animation
+        this.renderNewPieces(newPieces);
 
         await this.sleep(400);
 
@@ -729,6 +781,34 @@ class VibeMatcherGame {
         }
 
         // Level status will be checked by the caller after isProcessing is set to false
+    }
+
+    updatePieceVisual(row, col) {
+        // Update a single piece's visual representation after a swap
+        const piece = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+        if (!piece) return;
+
+        const vibeType = this.board[row][col];
+
+        // Check if it's a special item
+        if (this.isSpecialItem(vibeType)) {
+            piece.className = `vibe-piece special-item special-${vibeType}`;
+
+            // Special item emojis
+            if (vibeType === this.SPECIAL_ITEMS.DYNAMITE) {
+                piece.textContent = '🧨';
+            } else if (vibeType === this.SPECIAL_ITEMS.BOMB) {
+                piece.textContent = '💣';
+            } else if (vibeType === this.SPECIAL_ITEMS.NUCLEAR) {
+                piece.textContent = '☢️';
+            }
+        } else {
+            piece.className = `vibe-piece vibe-${vibeType}`;
+
+            // Simple heart emoji for easy recognition
+            const symbols = ['❤️', '💙', '💛', '💚', '💜'];
+            piece.textContent = symbols[vibeType];
+        }
     }
 
     findOldRowForPiece(oldBoard, newRow, col, value) {
