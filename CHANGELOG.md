@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.1] - 2025-10-23
 
 ### Added
+- **COMPREHENSIVE TEST SUITE**: 25+ automated tests to prevent regressions
+  - test.html: Browser-based test runner with visual results
+  - run-tests.sh: Pre-commit test validation script
+  - TESTING.md: Complete testing policy documentation
+  - Tests cover: board init, match detection, gravity, special items, scoring, swaps, seeded random
+  - **MANDATORY**: All future changes must pass tests before committing
 - **MUSIC & SOUNDS**: Complete audio system with background music and sound effects
   - Background music toggle button (🎵/🔇)
   - Ambient C major arpeggio background loop
@@ -19,8 +25,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Web Audio API-based sound generation (no external files needed)
 
 ### Fixed
+- **CRITICAL: Hanging matches**: Simplified match processing to fix matches that wouldn't complete
+  - Removed complex piece tracking that caused DOM/data desync
+  - Matches now reliably complete every time
+  - Same fix applied to special item explosions
 - **Board reflow issue**: Added explicit grid-template-rows and grid-auto-flow to prevent left-to-right wrapping
+- **Special items in matches**: Fixed match detection to exclude special items (100+)
+- **False eliminations**: Fixed wouldCreateMatch to ignore special items in comparisons
+- **Initial board matches**: Board no longer spawns with 4-5 in a row
 - Grid now properly displays as 7x7 without reflowing
+
+### Changed
+- Simplified rendering logic back to reliable renderWithFallingAnimation()
+- Removed experimental renderBoardWithNewPieces() that caused bugs
+- Updated development workflow to require test validation
 
 ## [1.3.0] - 2025-10-23
 
