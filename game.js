@@ -79,7 +79,7 @@ class SoundManager {
     }
 
     startBackgroundMusic() {
-        if (!this.musicEnabled || this.musicOscillators.length > 0) return;
+        if (!this.musicEnabled) return;
         if (!this.audioContext) this.initAudio();
 
         // Resume audio context if suspended
@@ -90,9 +90,10 @@ class SoundManager {
         // Simple ambient loop - C major arpeggio
         const notes = [262, 330, 392, 523]; // C-E-G-C
         let noteIndex = 0;
+        let isPlaying = true;
 
         const playNote = () => {
-            if (!this.musicEnabled) return;
+            if (!this.musicEnabled || !isPlaying) return;
 
             const osc = this.audioContext.createOscillator();
             const gain = this.audioContext.createGain();
@@ -109,18 +110,24 @@ class SoundManager {
             osc.start(this.audioContext.currentTime);
             osc.stop(this.audioContext.currentTime + 0.8);
 
+            // Store reference so we can stop it later
+            this.musicOscillators.push({ osc, isPlaying: () => isPlaying });
+
             noteIndex = (noteIndex + 1) % notes.length;
 
-            if (this.musicEnabled) {
-                setTimeout(playNote, 600);
-            }
+            // Schedule next note
+            setTimeout(playNote, 600);
         };
 
+        // Clear any existing oscillators
+        this.stopBackgroundMusic();
+
+        // Start playing
         playNote();
     }
 
     stopBackgroundMusic() {
-        this.musicOscillators.forEach(osc => osc.stop());
+        this.musicEnabled = false;
         this.musicOscillators = [];
     }
 
@@ -184,16 +191,31 @@ class VibeMatcherGame {
 
         // Start music on first user interaction (required by browsers)
         const startAudio = () => {
-            if (this.sound.audioContext && this.sound.audioContext.state === 'suspended') {
-                this.sound.audioContext.resume();
+            console.log('🎵 Starting audio on user interaction...');
+            if (!this.sound.audioContext) {
+                this.sound.initAudio();
             }
-            if (this.sound.musicEnabled && this.sound.musicOscillators.length === 0) {
-                this.sound.startBackgroundMusic();
+            if (this.sound.audioContext.state === 'suspended') {
+                this.sound.audioContext.resume().then(() => {
+                    console.log('✓ Audio context resumed');
+                    if (this.sound.musicEnabled) {
+                        this.sound.startBackgroundMusic();
+                        console.log('✓ Background music started');
+                    }
+                });
+            } else {
+                if (this.sound.musicEnabled) {
+                    this.sound.startBackgroundMusic();
+                    console.log('✓ Background music started');
+                }
             }
         };
 
+        // Listen on both game board and document to catch any click
         document.addEventListener('click', startAudio, { once: true });
         document.addEventListener('touchstart', startAudio, { once: true });
+        document.getElementById('game-board').addEventListener('click', startAudio, { once: true });
+        document.getElementById('game-board').addEventListener('touchstart', startAudio, { once: true });
     }
 
     // Seeded random number generator for deterministic levels
@@ -696,11 +718,24 @@ class VibeMatcherGame {
 
             // Highlight matched pieces and create particles
             matches.forEach(([row, col]) => {
-                const piece = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                // Try multiple selectors to ensure we find the piece
+                let piece = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+
+                // If not found, it might be because of DOM updates, try finding by position in grid
+                if (!piece) {
+                    const allPieces = document.querySelectorAll('.vibe-piece');
+                    const index = row * this.boardSize + col;
+                    if (allPieces[index]) {
+                        piece = allPieces[index];
+                    }
+                }
+
                 if (piece) {
                     piece.classList.add('matched');
                     // Create particle burst at piece location
                     this.createParticleBurst(piece, matches.length);
+                } else {
+                    console.warn(`Could not find piece at [${row},${col}] for match animation`);
                 }
             });
 
