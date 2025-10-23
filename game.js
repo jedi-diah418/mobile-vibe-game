@@ -1,7 +1,7 @@
 class VibeMatcherGame {
     constructor() {
-        this.boardSize = 8;
-        this.vibeTypes = 8;
+        this.boardSize = 7;
+        this.vibeTypes = 5;
         this.board = [];
         this.selectedPiece = null;
         this.score = 0;
@@ -635,8 +635,8 @@ class VibeMatcherGame {
                 } else {
                     piece.className = `vibe-piece vibe-${vibeType}`;
 
-                    // Add symbol based on vibe type - geometric shapes for better visibility
-                    const symbols = ['◆', '●', '■', '▲', '★', '◈', '⬢', '◉'];
+                    // Simple heart emoji for easy recognition
+                    const symbols = ['❤️', '💙', '💛', '💚', '💜'];
                     piece.textContent = symbols[vibeType];
                 }
 
@@ -675,8 +675,8 @@ class VibeMatcherGame {
                 } else {
                     piece.className = `vibe-piece vibe-${vibeType}`;
 
-                    // Add symbol based on vibe type - geometric shapes for better visibility
-                    const symbols = ['◆', '●', '■', '▲', '★', '◈', '⬢', '◉'];
+                    // Simple heart emoji for easy recognition
+                    const symbols = ['❤️', '💙', '💛', '💚', '💜'];
                     piece.textContent = symbols[vibeType];
                 }
 

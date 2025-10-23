@@ -8,7 +8,7 @@ Mobile-friendly match-3 puzzle game called "Vibe Matcher", inspired by Fishdom. 
 **Tech Stack**: Vanilla HTML/CSS/JavaScript (no frameworks)
 **Deployment**: GitHub Actions auto-deploy to GitHub Pages
 
-## Current Version: v1.2.2
+## Current Version: v1.3.0
 
 ## Key Files
 
@@ -39,7 +39,7 @@ Mobile-friendly match-3 puzzle game called "Vibe Matcher", inspired by Fishdom. 
 ## Game Mechanics
 
 ### Board & Pieces
-- 8x8 grid with 8 vibe types (geometric symbols: ◆●■▲★◈⬢◉)
+- 7x7 grid with 5 vibe types (heart emoji: ❤️💙💛💚💜)
 - All swaps allowed (not just match-making swaps) to enable combo setup
 - Match-3 or more horizontally or vertically
 - Cascading matches after pieces fall
@@ -119,21 +119,18 @@ seededRandom(seed) {
 - overflow: hidden prevents scrolling
 - Reduced padding for larger visible area
 
-## Color Scheme (Dark Teal Theme)
+## Color Scheme (Simplified for Kids)
 
 ### Background
 - Pure black (#000000)
 - Dark slate gradient on container
 
-### Vibe Colors (All Teal/Cyan Variants)
-- vibe-0: #14b8a6 (teal-500)
-- vibe-1: #06b6d4 (cyan-500)
-- vibe-2: #0891b2 (cyan-600)
-- vibe-3: #0e7490 (cyan-700)
-- vibe-4: #0d9488 (teal-600)
-- vibe-5: #0f766e (teal-700)
-- vibe-6: #5eead4 (teal-300)
-- vibe-7: #2dd4bf (teal-400)
+### Vibe Colors (Distinct Primary Colors)
+- vibe-0: Red (#ff4757) - ❤️
+- vibe-1: Blue (#1e90ff) - 💙
+- vibe-2: Yellow (#ffd700) - 💛
+- vibe-3: Green (#2ecc71) - 💚
+- vibe-4: Purple (#9b59b6) - 💜
 
 ## Known Issues & Fixes
 

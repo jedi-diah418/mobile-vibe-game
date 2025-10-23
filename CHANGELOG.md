@@ -5,6 +5,21 @@ All notable changes to Vibe Matcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2025-10-23
+
+### Changed
+- **SIMPLIFIED GAME**: Reduced vibe types from 8 to 5 for easier gameplay
+- **SMALLER BOARD**: Changed board size from 8x8 to 7x7 grid - less overwhelming, easier to scan
+- **CLEARER SYMBOLS**: Replaced geometric symbols (◆●■▲★◈⬢◉) with simple heart emoji (❤️💙💛💚💜)
+- **DISTINCT COLORS**: Replaced similar teal variants with 5 distinct primary colors:
+  - Red, Blue, Yellow, Green, Purple
+- Much easier for 8-year-olds and lazy adults to quickly identify matches
+- Faster gameplay with fewer pieces to track
+- Better mobile experience with larger pieces on smaller board
+
+### Why These Changes?
+Based on user feedback that 8 symbols with similar teal colors was confusing. New design focuses on simplicity and clarity - perfect for kids and casual play!
+
 ## [1.2.2] - 2025-10-22
 
 ### Fixed

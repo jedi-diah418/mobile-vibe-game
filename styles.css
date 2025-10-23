@@ -189,7 +189,7 @@ body {
 
 .game-board {
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
+    grid-template-columns: repeat(7, 1fr);
     gap: 3px;
     background: rgba(0, 0, 0, 0.6);
     padding: 6px;
@@ -321,15 +321,12 @@ body {
     }
 }
 
-/* Vibe colors - Dark mode with teal priority */
-.vibe-0 { background: linear-gradient(135deg, #00d9ff 0%, #64ffda 100%); box-shadow: 0 2px 8px rgba(100, 255, 218, 0.4); } /* Teal */
-.vibe-1 { background: linear-gradient(135deg, #64ffda 0%, #00bfa5 100%); box-shadow: 0 2px 8px rgba(0, 191, 165, 0.4); } /* Aqua */
-.vibe-2 { background: linear-gradient(135deg, #4dd0e1 0%, #0097a7 100%); box-shadow: 0 2px 8px rgba(77, 208, 225, 0.4); } /* Cyan */
-.vibe-3 { background: linear-gradient(135deg, #80deea 0%, #26c6da 100%); box-shadow: 0 2px 8px rgba(128, 222, 234, 0.4); } /* Light cyan */
-.vibe-4 { background: linear-gradient(135deg, #18ffff 0%, #00e5ff 100%); box-shadow: 0 2px 8px rgba(24, 255, 255, 0.4); } /* Bright cyan */
-.vibe-5 { background: linear-gradient(135deg, #a7ffeb 0%, #64ffda 100%); box-shadow: 0 2px 8px rgba(167, 255, 235, 0.4); } /* Mint */
-.vibe-6 { background: linear-gradient(135deg, #00bcd4 0%, #0097a7 100%); box-shadow: 0 2px 8px rgba(0, 188, 212, 0.4); } /* Deep cyan */
-.vibe-7 { background: linear-gradient(135deg, #26a69a 0%, #00897b 100%); box-shadow: 0 2px 8px rgba(38, 166, 154, 0.4); } /* Teal dark */
+/* Vibe colors - Distinct, easy to identify colors for hearts */
+.vibe-0 { background: linear-gradient(135deg, #ff4757 0%, #ee5a6f 100%); box-shadow: 0 2px 8px rgba(255, 71, 87, 0.5); } /* Red Heart */
+.vibe-1 { background: linear-gradient(135deg, #1e90ff 0%, #4169e1 100%); box-shadow: 0 2px 8px rgba(30, 144, 255, 0.5); } /* Blue Heart */
+.vibe-2 { background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); box-shadow: 0 2px 8px rgba(255, 215, 0, 0.5); } /* Yellow Heart */
+.vibe-3 { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); box-shadow: 0 2px 8px rgba(46, 204, 113, 0.5); } /* Green Heart */
+.vibe-4 { background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); box-shadow: 0 2px 8px rgba(155, 89, 182, 0.5); } /* Purple Heart */
 
 /* Special items */
 .special-item {
