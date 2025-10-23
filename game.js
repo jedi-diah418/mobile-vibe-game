@@ -1,7 +1,166 @@
+class SoundManager {
+    constructor() {
+        this.audioContext = null;
+        this.musicEnabled = true;
+        this.sfxEnabled = true;
+        this.musicGain = null;
+        this.musicOscillators = [];
+        this.initAudio();
+    }
+
+    initAudio() {
+        // Create audio context on first user interaction
+        if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.musicGain = this.audioContext.createGain();
+            this.musicGain.connect(this.audioContext.destination);
+            this.musicGain.gain.value = 0.1;
+        }
+    }
+
+    playSwap() {
+        if (!this.sfxEnabled) return;
+        this.playTone(400, 0.05, 'sine', 0.15);
+    }
+
+    playMatch(matchSize) {
+        if (!this.sfxEnabled) return;
+        const baseFreq = 500 + (matchSize * 50);
+        this.playTone(baseFreq, 0.15, 'square', 0.2);
+        setTimeout(() => this.playTone(baseFreq * 1.5, 0.1, 'square', 0.15), 80);
+    }
+
+    playExplosion(size) {
+        if (!this.sfxEnabled) return;
+        // Big explosive sound
+        this.playTone(100, 0.3, 'sawtooth', 0.3);
+        setTimeout(() => this.playTone(150, 0.2, 'sawtooth', 0.25), 100);
+        setTimeout(() => this.playTone(80, 0.15, 'sawtooth', 0.2), 200);
+    }
+
+    playLevelComplete() {
+        if (!this.sfxEnabled) return;
+        const melody = [523, 659, 784, 1047]; // C-E-G-C
+        melody.forEach((freq, i) => {
+            setTimeout(() => this.playTone(freq, 0.2, 'sine', 0.3), i * 150);
+        });
+    }
+
+    playGameOver() {
+        if (!this.sfxEnabled) return;
+        const melody = [392, 349, 311, 262]; // G-F-Eb-C descending
+        melody.forEach((freq, i) => {
+            setTimeout(() => this.playTone(freq, 0.25, 'sine', 0.25), i * 180);
+        });
+    }
+
+    playTone(frequency, duration, type = 'sine', volume = 0.3) {
+        if (!this.audioContext) this.initAudio();
+
+        // Resume audio context if suspended (required by browsers)
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
+
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+
+        oscillator.frequency.value = frequency;
+        oscillator.type = type;
+
+        gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
+
+        oscillator.start(this.audioContext.currentTime);
+        oscillator.stop(this.audioContext.currentTime + duration);
+    }
+
+    startBackgroundMusic() {
+        if (!this.musicEnabled) return;
+        if (!this.audioContext) this.initAudio();
+
+        // Resume audio context if suspended
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
+
+        // Simple ambient loop - C major arpeggio
+        const notes = [262, 330, 392, 523]; // C-E-G-C
+        let noteIndex = 0;
+        let isPlaying = true;
+
+        const playNote = () => {
+            if (!this.musicEnabled || !isPlaying) return;
+
+            const osc = this.audioContext.createOscillator();
+            const gain = this.audioContext.createGain();
+
+            osc.connect(gain);
+            gain.connect(this.musicGain);
+
+            osc.frequency.value = notes[noteIndex];
+            osc.type = 'sine';
+
+            gain.gain.setValueAtTime(0.05, this.audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.8);
+
+            osc.start(this.audioContext.currentTime);
+            osc.stop(this.audioContext.currentTime + 0.8);
+
+            // Store reference so we can stop it later
+            this.musicOscillators.push({ osc, isPlaying: () => isPlaying });
+
+            noteIndex = (noteIndex + 1) % notes.length;
+
+            // Schedule next note
+            setTimeout(playNote, 600);
+        };
+
+        // Clear any existing oscillators
+        this.stopBackgroundMusic();
+
+        // Start playing
+        playNote();
+    }
+
+    stopBackgroundMusic() {
+        this.musicEnabled = false;
+        this.musicOscillators = [];
+    }
+
+    toggleMusic() {
+        this.musicEnabled = !this.musicEnabled;
+        if (this.musicEnabled) {
+            // Ensure audio context is created and resumed
+            if (!this.audioContext) {
+                this.initAudio();
+            }
+            if (this.audioContext.state === 'suspended') {
+                this.audioContext.resume().then(() => {
+                    this.startBackgroundMusic();
+                });
+            } else {
+                this.startBackgroundMusic();
+            }
+        } else {
+            this.stopBackgroundMusic();
+        }
+        return this.musicEnabled;
+    }
+
+    toggleSFX() {
+        this.sfxEnabled = !this.sfxEnabled;
+        return this.sfxEnabled;
+    }
+}
+
 class VibeMatcherGame {
     constructor() {
-        this.boardSize = 8;
-        this.vibeTypes = 8;
+        this.boardSize = 7;
+        this.vibeTypes = 5;
         this.board = [];
         this.selectedPiece = null;
         this.score = 0;
@@ -22,10 +181,41 @@ class VibeMatcherGame {
         this.levelSeed = this.level * 12345;
         this.rng = this.seededRandom(this.levelSeed);
 
+        // Sound manager
+        this.sound = new SoundManager();
+
         this.initializeBoard();
         this.setupEventListeners();
         this.render();
         this.updateUI();
+
+        // Start music on first user interaction (required by browsers)
+        const startAudio = () => {
+            console.log('🎵 Starting audio on user interaction...');
+            if (!this.sound.audioContext) {
+                this.sound.initAudio();
+            }
+            if (this.sound.audioContext.state === 'suspended') {
+                this.sound.audioContext.resume().then(() => {
+                    console.log('✓ Audio context resumed');
+                    if (this.sound.musicEnabled) {
+                        this.sound.startBackgroundMusic();
+                        console.log('✓ Background music started');
+                    }
+                });
+            } else {
+                if (this.sound.musicEnabled) {
+                    this.sound.startBackgroundMusic();
+                    console.log('✓ Background music started');
+                }
+            }
+        };
+
+        // Listen on both game board and document to catch any click
+        document.addEventListener('click', startAudio, { once: true });
+        document.addEventListener('touchstart', startAudio, { once: true });
+        document.getElementById('game-board').addEventListener('click', startAudio, { once: true });
+        document.getElementById('game-board').addEventListener('touchstart', startAudio, { once: true });
     }
 
     // Seeded random number generator for deterministic levels
@@ -90,17 +280,30 @@ class VibeMatcherGame {
     }
 
     wouldCreateMatch(row, col, vibeType) {
+        // Don't check matches for special items
+        if (this.isSpecialItem(vibeType)) {
+            return false;
+        }
+
         // Check horizontal match
-        if (col >= 2 &&
-            this.board[row][col - 1] === vibeType &&
-            this.board[row][col - 2] === vibeType) {
-            return true;
+        if (col >= 2) {
+            const left1 = this.board[row][col - 1];
+            const left2 = this.board[row][col - 2];
+            // Make sure we're not comparing with special items
+            if (!this.isSpecialItem(left1) && !this.isSpecialItem(left2) &&
+                left1 === vibeType && left2 === vibeType) {
+                return true;
+            }
         }
         // Check vertical match
-        if (row >= 2 &&
-            this.board[row - 1][col] === vibeType &&
-            this.board[row - 2][col] === vibeType) {
-            return true;
+        if (row >= 2) {
+            const up1 = this.board[row - 1][col];
+            const up2 = this.board[row - 2][col];
+            // Make sure we're not comparing with special items
+            if (!this.isSpecialItem(up1) && !this.isSpecialItem(up2) &&
+                up1 === vibeType && up2 === vibeType) {
+                return true;
+            }
         }
         return false;
     }
@@ -243,6 +446,13 @@ class VibeMatcherGame {
             this.showHint();
         });
 
+        document.getElementById('music-button').addEventListener('click', () => {
+            const enabled = this.sound.toggleMusic();
+            const btn = document.getElementById('music-button');
+            btn.textContent = enabled ? '🎵' : '🔇';
+            btn.title = enabled ? 'Music On' : 'Music Off';
+        });
+
         document.getElementById('message-button').addEventListener('click', () => {
             this.nextLevel();
         });
@@ -288,6 +498,9 @@ class VibeMatcherGame {
     async swapPieces(row1, col1, row2, col2) {
         this.isProcessing = true;
 
+        // Play swap sound
+        this.sound.playSwap();
+
         // Add swapping animation
         const piece1 = document.querySelector(`[data-row="${row1}"][data-col="${col1}"]`);
         const piece2 = document.querySelector(`[data-row="${row2}"][data-col="${col2}"]`);
@@ -304,7 +517,6 @@ class VibeMatcherGame {
             // Special item at position 1 - trigger explosion
             await this.triggerSpecialItem(row1, col1, val1);
             this.moves--;
-            this.render();
             this.deselectPiece();
             this.updateUI();
             this.isProcessing = false;
@@ -315,7 +527,6 @@ class VibeMatcherGame {
             // Special item at position 2 - trigger explosion
             await this.triggerSpecialItem(row2, col2, val2);
             this.moves--;
-            this.render();
             this.deselectPiece();
             this.updateUI();
             this.isProcessing = false;
@@ -331,8 +542,9 @@ class VibeMatcherGame {
         // Deduct move immediately
         this.moves--;
 
-        // Render the swap
-        this.render();
+        // Update the swapped pieces visually
+        this.updatePieceVisual(row1, col1);
+        this.updatePieceVisual(row2, col2);
         this.deselectPiece();
         this.updateUI();
 
@@ -359,10 +571,12 @@ class VibeMatcherGame {
 
         // Check if level is complete (target score reached)
         if (this.score >= this.targetScore && !isOverlayShowing) {
+            this.sound.playLevelComplete();
             this.showMessage('Level Complete!', `Amazing! You scored ${this.score} points! Ready for the next level?`, 'Next Level');
         }
         // Check for game over (out of moves but didn't reach target)
         else if (this.moves <= 0 && this.score < this.targetScore && !isOverlayShowing) {
+            this.sound.playGameOver();
             this.showMessage('Game Over!', `You scored ${this.score} points. Try again?`, 'Restart');
         }
     }
@@ -390,6 +604,9 @@ class VibeMatcherGame {
             }
         }
 
+        // Play explosion sound
+        this.sound.playExplosion(toDestroy.length);
+
         // MASSIVE screen shake for explosions!
         this.screenShake(toDestroy.length);
 
@@ -410,15 +627,23 @@ class VibeMatcherGame {
         this.score += points;
         this.updateUI();
 
-        // Remove all destroyed pieces
+        // Remove all destroyed pieces from board and DOM
         toDestroy.forEach(([r, c]) => {
+            const piece = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+            if (piece) {
+                piece.remove();
+            }
             this.board[r][c] = null;
         });
 
-        // Apply gravity and fill
+        // Apply gravity
         this.applyGravity();
+
+        // Fill empty spaces
         this.fillBoard();
-        this.render();
+
+        // Render with falling animation
+        this.renderWithFallingAnimation();
 
         await this.sleep(400);
 
@@ -436,6 +661,9 @@ class VibeMatcherGame {
         for (let row = 0; row < this.boardSize; row++) {
             for (let col = 0; col < this.boardSize - 2; col++) {
                 const vibeType = this.board[row][col];
+                // Don't match special items or null values
+                if (vibeType === null || this.isSpecialItem(vibeType)) continue;
+
                 if (this.board[row][col + 1] === vibeType &&
                     this.board[row][col + 2] === vibeType) {
                     let endCol = col + 2;
@@ -453,6 +681,9 @@ class VibeMatcherGame {
         for (let col = 0; col < this.boardSize; col++) {
             for (let row = 0; row < this.boardSize - 2; row++) {
                 const vibeType = this.board[row][col];
+                // Don't match special items or null values
+                if (vibeType === null || this.isSpecialItem(vibeType)) continue;
+
                 if (this.board[row + 1][col] === vibeType &&
                     this.board[row + 2][col] === vibeType) {
                     let endRow = row + 2;
@@ -479,16 +710,32 @@ class VibeMatcherGame {
         let matches = this.findMatches();
 
         while (matches.length > 0) {
+            // Play match sound
+            this.sound.playMatch(matches.length);
+
             // SCREEN SHAKE for ALL matches! Scale intensity by match size
             this.screenShake(matches.length);
 
             // Highlight matched pieces and create particles
             matches.forEach(([row, col]) => {
-                const piece = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                // Try multiple selectors to ensure we find the piece
+                let piece = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+
+                // If not found, it might be because of DOM updates, try finding by position in grid
+                if (!piece) {
+                    const allPieces = document.querySelectorAll('.vibe-piece');
+                    const index = row * this.boardSize + col;
+                    if (allPieces[index]) {
+                        piece = allPieces[index];
+                    }
+                }
+
                 if (piece) {
                     piece.classList.add('matched');
                     // Create particle burst at piece location
                     this.createParticleBurst(piece, matches.length);
+                } else {
+                    console.warn(`Could not find piece at [${row},${col}] for match animation`);
                 }
             });
 
@@ -499,8 +746,12 @@ class VibeMatcherGame {
             this.score += matchScore;
             this.updateUI();
 
-            // Remove matched pieces
+            // Remove matched pieces from board and DOM
             matches.forEach(([row, col]) => {
+                const piece = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                if (piece) {
+                    piece.remove();
+                }
                 this.board[row][col] = null;
             });
 
@@ -520,6 +771,34 @@ class VibeMatcherGame {
         }
 
         // Level status will be checked by the caller after isProcessing is set to false
+    }
+
+    updatePieceVisual(row, col) {
+        // Update a single piece's visual representation after a swap
+        const piece = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+        if (!piece) return;
+
+        const vibeType = this.board[row][col];
+
+        // Check if it's a special item
+        if (this.isSpecialItem(vibeType)) {
+            piece.className = `vibe-piece special-item special-${vibeType}`;
+
+            // Special item emojis
+            if (vibeType === this.SPECIAL_ITEMS.DYNAMITE) {
+                piece.textContent = '🧨';
+            } else if (vibeType === this.SPECIAL_ITEMS.BOMB) {
+                piece.textContent = '💣';
+            } else if (vibeType === this.SPECIAL_ITEMS.NUCLEAR) {
+                piece.textContent = '☢️';
+            }
+        } else {
+            piece.className = `vibe-piece vibe-${vibeType}`;
+
+            // Simple heart emoji for easy recognition
+            const symbols = ['❤️', '💙', '💛', '💚', '💜'];
+            piece.textContent = symbols[vibeType];
+        }
     }
 
     screenShake(matchCount = 3) {
@@ -635,8 +914,8 @@ class VibeMatcherGame {
                 } else {
                     piece.className = `vibe-piece vibe-${vibeType}`;
 
-                    // Add symbol based on vibe type - geometric shapes for better visibility
-                    const symbols = ['◆', '●', '■', '▲', '★', '◈', '⬢', '◉'];
+                    // Simple heart emoji for easy recognition
+                    const symbols = ['❤️', '💙', '💛', '💚', '💜'];
                     piece.textContent = symbols[vibeType];
                 }
 
@@ -675,8 +954,8 @@ class VibeMatcherGame {
                 } else {
                     piece.className = `vibe-piece vibe-${vibeType}`;
 
-                    // Add symbol based on vibe type - geometric shapes for better visibility
-                    const symbols = ['◆', '●', '■', '▲', '★', '◈', '⬢', '◉'];
+                    // Simple heart emoji for easy recognition
+                    const symbols = ['❤️', '💙', '💛', '💚', '💜'];
                     piece.textContent = symbols[vibeType];
                 }
 
@@ -687,10 +966,7 @@ class VibeMatcherGame {
                 const distanceToFall = (row + 1) * cellSize;
                 piece.style.setProperty('--fall-distance', `${distanceToFall}px`);
 
-                // Add staggered delay based on column
-                const delay = col * 0.03;
-                piece.style.animationDelay = `${delay}s`;
-
+                // No delay - all pieces fall straight down simultaneously
                 piece.classList.add('falling');
 
                 boardElement.appendChild(piece);

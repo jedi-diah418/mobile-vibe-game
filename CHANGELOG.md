@@ -5,6 +5,70 @@ All notable changes to Vibe Matcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2025-10-23
+
+### Fixed
+- **Match animations**: All matched pieces (3, 4, or 5) now animate properly
+  - Added fallback logic to find pieces by grid position when querySelector fails
+  - Fixes issue where only moved pieces showed animation
+  - All matched pieces now get highlighted and show particle effects
+- **Music playback**: Background music now plays continuously
+  - Fixed music loop to schedule notes indefinitely
+  - Added proper audio context initialization with multiple event listeners
+  - Music toggle button (🎵/🔇) now works reliably
+  - Added debug logging to track audio startup
+- Console warnings added to help debug piece-finding issues
+
+## [1.3.1] - 2025-10-23
+
+### Added
+- **COMPREHENSIVE TEST SUITE**: 25+ automated tests to prevent regressions
+  - test.html: Browser-based test runner with visual results
+  - run-tests.sh: Pre-commit test validation script
+  - TESTING.md: Complete testing policy documentation
+  - Tests cover: board init, match detection, gravity, special items, scoring, swaps, seeded random
+  - **MANDATORY**: All future changes must pass tests before committing
+- **MUSIC & SOUNDS**: Complete audio system with background music and sound effects
+  - Background music toggle button (🎵/🔇)
+  - Ambient C major arpeggio background loop
+  - Sound effects for swaps, matches, explosions, level complete, and game over
+  - Match sounds scale with combo size
+  - Explosion sounds for special items
+  - Victory melody for level complete
+  - Defeat melody for game over
+- Web Audio API-based sound generation (no external files needed)
+
+### Fixed
+- **CRITICAL: Hanging matches**: Simplified match processing to fix matches that wouldn't complete
+  - Removed complex piece tracking that caused DOM/data desync
+  - Matches now reliably complete every time
+  - Same fix applied to special item explosions
+- **Board reflow issue**: Added explicit grid-template-rows and grid-auto-flow to prevent left-to-right wrapping
+- **Special items in matches**: Fixed match detection to exclude special items (100+)
+- **False eliminations**: Fixed wouldCreateMatch to ignore special items in comparisons
+- **Initial board matches**: Board no longer spawns with 4-5 in a row
+- Grid now properly displays as 7x7 without reflowing
+
+### Changed
+- Simplified rendering logic back to reliable renderWithFallingAnimation()
+- Removed experimental renderBoardWithNewPieces() that caused bugs
+- Updated development workflow to require test validation
+
+## [1.3.0] - 2025-10-23
+
+### Changed
+- **SIMPLIFIED GAME**: Reduced vibe types from 8 to 5 for easier gameplay
+- **SMALLER BOARD**: Changed board size from 8x8 to 7x7 grid - less overwhelming, easier to scan
+- **CLEARER SYMBOLS**: Replaced geometric symbols (◆●■▲★◈⬢◉) with simple heart emoji (❤️💙💛💚💜)
+- **DISTINCT COLORS**: Replaced similar teal variants with 5 distinct primary colors:
+  - Red, Blue, Yellow, Green, Purple
+- Much easier for 8-year-olds and lazy adults to quickly identify matches
+- Faster gameplay with fewer pieces to track
+- Better mobile experience with larger pieces on smaller board
+
+### Why These Changes?
+Based on user feedback that 8 symbols with similar teal colors was confusing. New design focuses on simplicity and clarity - perfect for kids and casual play!
+
 ## [1.2.2] - 2025-10-22
 
 ### Fixed
