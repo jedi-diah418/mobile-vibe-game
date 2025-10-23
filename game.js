@@ -57,6 +57,11 @@ class SoundManager {
     playTone(frequency, duration, type = 'sine', volume = 0.3) {
         if (!this.audioContext) this.initAudio();
 
+        // Resume audio context if suspended (required by browsers)
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
+
         const oscillator = this.audioContext.createOscillator();
         const gainNode = this.audioContext.createGain();
 
@@ -76,6 +81,11 @@ class SoundManager {
     startBackgroundMusic() {
         if (!this.musicEnabled || this.musicOscillators.length > 0) return;
         if (!this.audioContext) this.initAudio();
+
+        // Resume audio context if suspended
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
 
         // Simple ambient loop - C major arpeggio
         const notes = [262, 330, 392, 523]; // C-E-G-C
@@ -162,8 +172,15 @@ class VibeMatcherGame {
         this.render();
         this.updateUI();
 
-        // Start background music
-        setTimeout(() => this.sound.startBackgroundMusic(), 500);
+        // Initialize audio on first user interaction
+        document.addEventListener('click', () => {
+            if (this.sound.audioContext && this.sound.audioContext.state === 'suspended') {
+                this.sound.audioContext.resume();
+            }
+            if (this.sound.musicEnabled) {
+                this.sound.startBackgroundMusic();
+            }
+        }, { once: true });
     }
 
     // Seeded random number generator for deterministic levels
@@ -843,10 +860,7 @@ class VibeMatcherGame {
                 const distanceToFall = (row + 1) * cellSize;
                 piece.style.setProperty('--fall-distance', `${distanceToFall}px`);
 
-                // Add staggered delay based on column
-                const delay = col * 0.03;
-                piece.style.animationDelay = `${delay}s`;
-
+                // No delay - all pieces fall straight down simultaneously
                 piece.classList.add('falling');
 
                 boardElement.appendChild(piece);
