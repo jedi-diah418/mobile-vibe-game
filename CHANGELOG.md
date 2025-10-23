@@ -5,6 +5,20 @@ All notable changes to Vibe Matcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2025-10-23
+
+### Fixed
+- **Match animations**: All matched pieces (3, 4, or 5) now animate properly
+  - Added fallback logic to find pieces by grid position when querySelector fails
+  - Fixes issue where only moved pieces showed animation
+  - All matched pieces now get highlighted and show particle effects
+- **Music playback**: Background music now plays continuously
+  - Fixed music loop to schedule notes indefinitely
+  - Added proper audio context initialization with multiple event listeners
+  - Music toggle button (🎵/🔇) now works reliably
+  - Added debug logging to track audio startup
+- Console warnings added to help debug piece-finding issues
+
 ## [1.3.1] - 2025-10-23
 
 ### Added
