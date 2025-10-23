@@ -190,6 +190,8 @@ body {
 .game-board {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: repeat(7, 1fr);
+    grid-auto-flow: row;
     gap: 3px;
     background: rgba(0, 0, 0, 0.6);
     padding: 6px;

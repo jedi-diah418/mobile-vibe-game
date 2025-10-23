@@ -1,3 +1,135 @@
+class SoundManager {
+    constructor() {
+        this.audioContext = null;
+        this.musicEnabled = true;
+        this.sfxEnabled = true;
+        this.musicGain = null;
+        this.musicOscillators = [];
+        this.initAudio();
+    }
+
+    initAudio() {
+        // Create audio context on first user interaction
+        if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.musicGain = this.audioContext.createGain();
+            this.musicGain.connect(this.audioContext.destination);
+            this.musicGain.gain.value = 0.1;
+        }
+    }
+
+    playSwap() {
+        if (!this.sfxEnabled) return;
+        this.playTone(400, 0.05, 'sine', 0.15);
+    }
+
+    playMatch(matchSize) {
+        if (!this.sfxEnabled) return;
+        const baseFreq = 500 + (matchSize * 50);
+        this.playTone(baseFreq, 0.15, 'square', 0.2);
+        setTimeout(() => this.playTone(baseFreq * 1.5, 0.1, 'square', 0.15), 80);
+    }
+
+    playExplosion(size) {
+        if (!this.sfxEnabled) return;
+        // Big explosive sound
+        this.playTone(100, 0.3, 'sawtooth', 0.3);
+        setTimeout(() => this.playTone(150, 0.2, 'sawtooth', 0.25), 100);
+        setTimeout(() => this.playTone(80, 0.15, 'sawtooth', 0.2), 200);
+    }
+
+    playLevelComplete() {
+        if (!this.sfxEnabled) return;
+        const melody = [523, 659, 784, 1047]; // C-E-G-C
+        melody.forEach((freq, i) => {
+            setTimeout(() => this.playTone(freq, 0.2, 'sine', 0.3), i * 150);
+        });
+    }
+
+    playGameOver() {
+        if (!this.sfxEnabled) return;
+        const melody = [392, 349, 311, 262]; // G-F-Eb-C descending
+        melody.forEach((freq, i) => {
+            setTimeout(() => this.playTone(freq, 0.25, 'sine', 0.25), i * 180);
+        });
+    }
+
+    playTone(frequency, duration, type = 'sine', volume = 0.3) {
+        if (!this.audioContext) this.initAudio();
+
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+
+        oscillator.frequency.value = frequency;
+        oscillator.type = type;
+
+        gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
+
+        oscillator.start(this.audioContext.currentTime);
+        oscillator.stop(this.audioContext.currentTime + duration);
+    }
+
+    startBackgroundMusic() {
+        if (!this.musicEnabled || this.musicOscillators.length > 0) return;
+        if (!this.audioContext) this.initAudio();
+
+        // Simple ambient loop - C major arpeggio
+        const notes = [262, 330, 392, 523]; // C-E-G-C
+        let noteIndex = 0;
+
+        const playNote = () => {
+            if (!this.musicEnabled) return;
+
+            const osc = this.audioContext.createOscillator();
+            const gain = this.audioContext.createGain();
+
+            osc.connect(gain);
+            gain.connect(this.musicGain);
+
+            osc.frequency.value = notes[noteIndex];
+            osc.type = 'sine';
+
+            gain.gain.setValueAtTime(0.05, this.audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.8);
+
+            osc.start(this.audioContext.currentTime);
+            osc.stop(this.audioContext.currentTime + 0.8);
+
+            noteIndex = (noteIndex + 1) % notes.length;
+
+            if (this.musicEnabled) {
+                setTimeout(playNote, 600);
+            }
+        };
+
+        playNote();
+    }
+
+    stopBackgroundMusic() {
+        this.musicOscillators.forEach(osc => osc.stop());
+        this.musicOscillators = [];
+    }
+
+    toggleMusic() {
+        this.musicEnabled = !this.musicEnabled;
+        if (this.musicEnabled) {
+            this.startBackgroundMusic();
+        } else {
+            this.stopBackgroundMusic();
+        }
+        return this.musicEnabled;
+    }
+
+    toggleSFX() {
+        this.sfxEnabled = !this.sfxEnabled;
+        return this.sfxEnabled;
+    }
+}
+
 class VibeMatcherGame {
     constructor() {
         this.boardSize = 7;
@@ -22,10 +154,16 @@ class VibeMatcherGame {
         this.levelSeed = this.level * 12345;
         this.rng = this.seededRandom(this.levelSeed);
 
+        // Sound manager
+        this.sound = new SoundManager();
+
         this.initializeBoard();
         this.setupEventListeners();
         this.render();
         this.updateUI();
+
+        // Start background music
+        setTimeout(() => this.sound.startBackgroundMusic(), 500);
     }
 
     // Seeded random number generator for deterministic levels
@@ -243,6 +381,13 @@ class VibeMatcherGame {
             this.showHint();
         });
 
+        document.getElementById('music-button').addEventListener('click', () => {
+            const enabled = this.sound.toggleMusic();
+            const btn = document.getElementById('music-button');
+            btn.textContent = enabled ? '🎵' : '🔇';
+            btn.title = enabled ? 'Music On' : 'Music Off';
+        });
+
         document.getElementById('message-button').addEventListener('click', () => {
             this.nextLevel();
         });
@@ -287,6 +432,9 @@ class VibeMatcherGame {
 
     async swapPieces(row1, col1, row2, col2) {
         this.isProcessing = true;
+
+        // Play swap sound
+        this.sound.playSwap();
 
         // Add swapping animation
         const piece1 = document.querySelector(`[data-row="${row1}"][data-col="${col1}"]`);
@@ -359,10 +507,12 @@ class VibeMatcherGame {
 
         // Check if level is complete (target score reached)
         if (this.score >= this.targetScore && !isOverlayShowing) {
+            this.sound.playLevelComplete();
             this.showMessage('Level Complete!', `Amazing! You scored ${this.score} points! Ready for the next level?`, 'Next Level');
         }
         // Check for game over (out of moves but didn't reach target)
         else if (this.moves <= 0 && this.score < this.targetScore && !isOverlayShowing) {
+            this.sound.playGameOver();
             this.showMessage('Game Over!', `You scored ${this.score} points. Try again?`, 'Restart');
         }
     }
@@ -389,6 +539,9 @@ class VibeMatcherGame {
                 toDestroy.push([r, c]);
             }
         }
+
+        // Play explosion sound
+        this.sound.playExplosion(toDestroy.length);
 
         // MASSIVE screen shake for explosions!
         this.screenShake(toDestroy.length);
@@ -479,6 +632,9 @@ class VibeMatcherGame {
         let matches = this.findMatches();
 
         while (matches.length > 0) {
+            // Play match sound
+            this.sound.playMatch(matches.length);
+
             // SCREEN SHAKE for ALL matches! Scale intensity by match size
             this.screenShake(matches.length);
 

@@ -5,6 +5,23 @@ All notable changes to Vibe Matcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2025-10-23
+
+### Added
+- **MUSIC & SOUNDS**: Complete audio system with background music and sound effects
+  - Background music toggle button (🎵/🔇)
+  - Ambient C major arpeggio background loop
+  - Sound effects for swaps, matches, explosions, level complete, and game over
+  - Match sounds scale with combo size
+  - Explosion sounds for special items
+  - Victory melody for level complete
+  - Defeat melody for game over
+- Web Audio API-based sound generation (no external files needed)
+
+### Fixed
+- **Board reflow issue**: Added explicit grid-template-rows and grid-auto-flow to prevent left-to-right wrapping
+- Grid now properly displays as 7x7 without reflowing
+
 ## [1.3.0] - 2025-10-23
 
 ### Changed
